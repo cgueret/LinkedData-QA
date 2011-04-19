@@ -11,7 +11,6 @@ import org.gephi.graph.api.Edge;
 import org.gephi.graph.api.GraphController;
 import org.gephi.graph.api.GraphModel;
 import org.gephi.graph.api.Node;
-import org.gephi.graph.api.NodeIterable;
 import org.gephi.project.api.ProjectController;
 import org.openide.util.Lookup;
 

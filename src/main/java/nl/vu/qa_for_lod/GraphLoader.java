@@ -7,8 +7,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.InputStream;
-import java.util.HashSet;
-import java.util.Set;
 
 import org.gephi.graph.api.Node;
 
@@ -116,6 +114,10 @@ public class GraphLoader {
 				} else {
 					// Content is not cached
 					m.read(node.toString());
+					
+					// TODO Wrap the loading code in an external class
+					// TODO Use HTTPClient to load the URI with accept on RDF/XML
+					// TODO Save only the useful information in ntriples
 					m.write(new FileOutputStream(f), null);
 				}
 
