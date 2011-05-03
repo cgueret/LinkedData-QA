@@ -1,0 +1,4 @@
+ INFO [main] (App.java:18) - Initial graph => Nodes: 99, Edges: 50
+ WARN [main] (SetupTDB.java:755) - No BGP optimizer
+ INFO [main] (GraphLoader.java:91) - After expansion => Nodes: 1334, Edges: 1899
+ INFO [main] (GraphLoader.java:104) - After connecting neighbours => Nodes: 1334, Edges: 3764
