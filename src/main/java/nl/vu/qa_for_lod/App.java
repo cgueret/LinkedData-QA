@@ -1,9 +1,12 @@
 package nl.vu.qa_for_lod;
 
-public class App {
-	public static void main(String[] args) throws Exception {
-		System.out.println("Loading graph...");
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+public class App {
+	 static Logger logger = LoggerFactory.getLogger(App.class);
+	
+	public static void main(String[] args) throws Exception {
 		// Create a graph
 		Graph graph = new Graph();
 		
@@ -12,15 +15,11 @@ public class App {
 		
 		// Load the seed
 		loader.loadSeed("data/links-cut.nt");
-		
-		// Print stats
-		graph.printStats();
+		logger.info("Initial graph => " + graph.getStats());
 
 		// Expand all resources of the seed
-		System.out.println("Expanding graph...");
 		loader.expandGraph();
 		
-		// Print stats
-		graph.printStats();
+		graph.dump("/tmp/graph");
 	}
 }

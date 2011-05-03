@@ -3,6 +3,10 @@
  */
 package nl.vu.qa_for_lod;
 
+import java.awt.Color;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -11,6 +15,11 @@ import org.gephi.graph.api.Edge;
 import org.gephi.graph.api.GraphController;
 import org.gephi.graph.api.GraphModel;
 import org.gephi.graph.api.Node;
+import org.gephi.io.exporter.api.ExportController;
+import org.gephi.preview.api.ColorizerFactory;
+import org.gephi.preview.api.EdgeColorizer;
+import org.gephi.preview.api.PreviewController;
+import org.gephi.preview.api.PreviewModel;
 import org.gephi.project.api.ProjectController;
 import org.openide.util.Lookup;
 
@@ -66,7 +75,7 @@ public class Graph {
 		if (sNode == null)
 			sNode = addNode(subject, size);
 		Node oNode = graphModel.getGraph().getNode(object.asResource().getURI());
-		if (oNode == null) 
+		if (oNode == null)
 			oNode = addNode(object.asResource(), size);
 		Edge edge = graphModel.factory().newEdge(sNode, oNode, size, true);
 		edge.getEdgeData().setLabel(predicate.getURI());
@@ -78,6 +87,9 @@ public class Graph {
 	 * @return
 	 */
 	public boolean containsResource(Resource resource) {
+		if (resource == null)
+			return false;
+
 		return (graphModel.getGraph().getNode(resource.getURI()) != null);
 	}
 
@@ -95,8 +107,37 @@ public class Graph {
 	/**
 	 * Output some stats
 	 */
-	public void printStats() {
-		System.out.println("Nodes: " + directedGraph.getNodeCount());
-		System.out.println("Edges: " + directedGraph.getEdgeCount());
+	public String getStats() {
+		StringBuffer buffer = new StringBuffer();
+		buffer.append("Nodes: ").append(directedGraph.getNodeCount());
+		buffer.append(", Edges: ").append(directedGraph.getEdgeCount());
+		return buffer.toString();
+	}
+
+	/**
+	 * @param string
+	 *            From http://wiki.gephi.org/index.php/Toolkit_-_Export_graph
+	 */
+	public void dump(String string) {
+		// Configure the rendering of the graph
+		PreviewModel model = Lookup.getDefault().lookup(PreviewController.class).getModel();
+		model.getNodeSupervisor().setShowNodeLabels(Boolean.TRUE);
+		ColorizerFactory colorizerFactory = Lookup.getDefault().lookup(ColorizerFactory.class);
+		model.getUniEdgeSupervisor().setColorizer(
+				(EdgeColorizer) colorizerFactory.createCustomColorMode(Color.LIGHT_GRAY));
+		model.getBiEdgeSupervisor().setColorizer((EdgeColorizer) colorizerFactory.createCustomColorMode(Color.GRAY));
+		model.getUniEdgeSupervisor().setEdgeScale(0.1f);
+		model.getBiEdgeSupervisor().setEdgeScale(0.1f);
+		model.getNodeSupervisor().setBaseNodeLabelFont(model.getNodeSupervisor().getBaseNodeLabelFont().deriveFont(8));
+
+		// Export the graph in gexf and pdf
+		ExportController ec = Lookup.getDefault().lookup(ExportController.class);
+		try {
+			ec.exportFile(new File(string + ".pdf"));
+			ec.exportFile(new File(string + ".gexf"));
+		} catch (IOException ex) {
+			ex.printStackTrace();
+			return;
+		}
 	}
 }
