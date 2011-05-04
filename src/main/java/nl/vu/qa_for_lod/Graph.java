@@ -150,10 +150,11 @@ public class Graph {
 		// Get Centrality
 		GraphDistance distance = new GraphDistance();
 		distance.setDirected(true);
+		distance.setRelative(false);
 		distance.execute(graphModel, attributeModel);
 		
 		// Get Centrality column created
-		AttributeColumn col = attributeModel.getNodeTable().getColumn(GraphDistance.BETWEENNESS);
+		AttributeColumn col = attributeModel.getNodeTable().getColumn(GraphDistance.CLOSENESS);
 
 		// Iterate over values
 		for (Node n : directedGraph.getNodes()) {
