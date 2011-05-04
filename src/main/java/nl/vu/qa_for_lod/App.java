@@ -12,20 +12,16 @@ public class App {
 
 		// Load the seed file
 		SeedFile seedFile = new SeedFile("data/links-cut.nt");
-		
+
 		// Load the graph around the seed Resources
-		GraphLoader loader = new GraphLoader(graph);
-		loader.loadGraph(seedFile.getSeedResources());
-		
-		// Load the seed, expand the graph
-		//loader.loadSeed("data/links-cut.nt");
+		graph.loadGraphFromSeeds(seedFile.getSeedResources());
 		logger.info("Graph => " + graph.getStats());
-		//loader.expandGraph();
 
 		// Dump the graph into external files
 		graph.dump("/tmp/graph");
-		
-		GraphMetrics metrics = new GraphMetrics(graph);
-		
+
+		// Run the analysis
+		GraphMetrics metrics = new GraphMetrics(graph, seedFile);
+		metrics.process();
 	}
 }

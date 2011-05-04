@@ -4,12 +4,16 @@
 package nl.vu.qa_for_lod;
 
 import java.awt.Color;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
+import org.gephi.data.attributes.api.AttributeColumn;
+import org.gephi.data.attributes.api.AttributeController;
+import org.gephi.data.attributes.api.AttributeModel;
 import org.gephi.graph.api.DirectedGraph;
 import org.gephi.graph.api.Edge;
 import org.gephi.graph.api.GraphController;
@@ -21,6 +25,7 @@ import org.gephi.preview.api.EdgeColorizer;
 import org.gephi.preview.api.PreviewController;
 import org.gephi.preview.api.PreviewModel;
 import org.gephi.project.api.ProjectController;
+import org.gephi.statistics.plugin.GraphDistance;
 import org.openide.util.Lookup;
 
 import com.hp.hpl.jena.rdf.model.Property;
@@ -32,6 +37,7 @@ import com.hp.hpl.jena.rdf.model.Statement;
  * @author Christophe Guéret <christophe.gueret@gmail.com>
  * 
  */
+// http://gephi.org/docs/toolkit/org/gephi/statistics/spi/Statistics.html
 public class Graph {
 	private DirectedGraph directedGraph;
 	private GraphModel graphModel;
@@ -50,10 +56,9 @@ public class Graph {
 	 * @param resource
 	 * @return
 	 */
-	private Node addNode(Resource resource, float size) {
+	private Node addNode(Resource resource) {
 		Node node = graphModel.factory().newNode(resource.getURI());
 		node.getNodeData().setLabel(resource.getURI());
-		node.getNodeData().setSize(size);
 		directedGraph.addNode(node);
 		return node;
 	}
@@ -63,7 +68,7 @@ public class Graph {
 	 * @param size
 	 *            Use size to mark seed VS extra nodes
 	 */
-	public void addStatement(Statement statement, float size) {
+	public void addStatement(Statement statement) {
 		Resource subject = statement.getSubject();
 		Property predicate = statement.getPredicate();
 		RDFNode object = statement.getObject();
@@ -73,11 +78,11 @@ public class Graph {
 		// Add the triple to the Gephi graph
 		Node sNode = graphModel.getGraph().getNode(subject.getURI());
 		if (sNode == null)
-			sNode = addNode(subject, size);
+			sNode = addNode(subject);
 		Node oNode = graphModel.getGraph().getNode(object.asResource().getURI());
 		if (oNode == null)
-			oNode = addNode(object.asResource(), size);
-		Edge edge = graphModel.factory().newEdge(sNode, oNode, size, true);
+			oNode = addNode(object.asResource());
+		Edge edge = graphModel.factory().newEdge(sNode, oNode, 1.0f, true);
 		edge.getEdgeData().setLabel(predicate.getURI());
 		directedGraph.addEdge(edge);
 	}
@@ -94,32 +99,12 @@ public class Graph {
 	}
 
 	/**
-	 * @return
-	 */
-	public Set<Node> getNodes(float size) {
-		Set<Node> nodes = new HashSet<Node>();
-		for (Node node : graphModel.getGraph().getNodes())
-			if (node.getNodeData().getSize() == size)
-				nodes.add(node);
-		return nodes;
-	}
-
-	/**
-	 * Output some stats
-	 */
-	public String getStats() {
-		StringBuffer buffer = new StringBuffer();
-		buffer.append("Nodes: ").append(directedGraph.getNodeCount());
-		buffer.append(", Edges: ").append(directedGraph.getEdgeCount());
-		return buffer.toString();
-	}
-
-	/**
 	 * @param string
-	 *            From http://wiki.gephi.org/index.php/Toolkit_-_Export_graph
+	 * 
 	 */
 	public void dump(String string) {
 		// Configure the rendering of the graph
+		// (from http://wiki.gephi.org/index.php/Toolkit_-_Export_graph)
 		PreviewModel model = Lookup.getDefault().lookup(PreviewController.class).getModel();
 		model.getNodeSupervisor().setShowNodeLabels(Boolean.TRUE);
 		ColorizerFactory colorizerFactory = Lookup.getDefault().lookup(ColorizerFactory.class);
@@ -139,5 +124,82 @@ public class Graph {
 			ex.printStackTrace();
 			return;
 		}
+	}
+
+	/**
+	 * @return
+	 */
+	public Set<Node> getNodes() {
+		Set<Node> nodes = new HashSet<Node>();
+		for (Node node : graphModel.getGraph().getNodes())
+			nodes.add(node);
+		return nodes;
+	}
+
+	/**
+	 * @return
+	 */
+	// http://wiki.gephi.org/index.php/Toolkit_-_Statistics_and_Metrics
+	public Map<String, Double> getNodesCentrality() {
+		Map<String, Double> results = new HashMap<String, Double>();
+		
+		// Get graph model and attribute model of current workspace
+		GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
+		AttributeModel attributeModel = Lookup.getDefault().lookup(AttributeController.class).getModel();
+
+		// Get Centrality
+		GraphDistance distance = new GraphDistance();
+		distance.setDirected(true);
+		distance.execute(graphModel, attributeModel);
+		
+		// Get Centrality column created
+		AttributeColumn col = attributeModel.getNodeTable().getColumn(GraphDistance.BETWEENNESS);
+
+		// Iterate over values
+		for (Node n : directedGraph.getNodes()) {
+			Double centrality = (Double) n.getNodeData().getAttributes().getValue(col.getIndex());
+			results.put(n.getNodeData().getLabel(), centrality);
+		}
+		
+		return results;
+	}
+
+	/**
+	 * Output some stats
+	 */
+	public String getStats() {
+		StringBuffer buffer = new StringBuffer();
+		buffer.append("Nodes: ").append(directedGraph.getNodeCount());
+		buffer.append(", Edges: ").append(directedGraph.getEdgeCount());
+		return buffer.toString();
+	}
+
+	/**
+	 * @param seedURIs
+	 */
+	// TODO Parallelise this
+	public void loadGraphFromSeeds(Set<Resource> seedURIs) {
+		// Get a data fetcher
+		DataFetcher fetcher = new DataFetcher();
+
+		// This list will be used for the second level
+		Set<Resource> neighbours = new HashSet<Resource>();
+
+		// Load the data from the seeds
+		for (Resource resource : seedURIs) {
+			for (Statement stmt : fetcher.get(resource)) {
+				addStatement(stmt);
+				neighbours.add(stmt.getObject().asResource());
+			}
+		}
+
+		// Connect the neighbours among them
+		for (Resource resource : neighbours)
+			for (Statement stmt : fetcher.get(resource))
+				if (containsResource(stmt.getObject().asResource()))
+					addStatement(stmt);
+
+		// Close the data fetcher
+		fetcher.close();
 	}
 }

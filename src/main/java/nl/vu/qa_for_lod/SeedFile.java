@@ -25,7 +25,7 @@ public class SeedFile {
 
 	/**
 	 * @param string
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	public SeedFile(String seedFileName) throws Exception {
 		// Read the seed rdf
@@ -56,11 +56,18 @@ public class SeedFile {
 	 */
 	public Set<Resource> getSeedResources() {
 		Set<Resource> resources = new HashSet<Resource>();
-		for (Statement statement: statements) {
+		for (Statement statement : statements) {
 			resources.add(statement.getSubject());
 			resources.add(statement.getObject().asResource());
 		}
 		return resources;
+	}
+
+	/**
+	 * @return
+	 */
+	public Set<Statement> getStatements() {
+		return statements;
 	}
 
 }

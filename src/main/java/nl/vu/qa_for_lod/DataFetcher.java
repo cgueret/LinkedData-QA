@@ -53,14 +53,6 @@ public class DataFetcher {
 	}
 
 	/**
-	 * @param URI
-	 * @return
-	 */
-	public Collection<Statement> get(String URI) {
-		return get(model.createResource(URI));
-	}
-
-	/**
 	 * @param resource
 	 * @return
 	 */
