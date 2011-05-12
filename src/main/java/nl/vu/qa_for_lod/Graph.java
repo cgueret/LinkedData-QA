@@ -25,6 +25,7 @@ import org.gephi.preview.api.EdgeColorizer;
 import org.gephi.preview.api.PreviewController;
 import org.gephi.preview.api.PreviewModel;
 import org.gephi.project.api.ProjectController;
+import org.gephi.statistics.plugin.DegreeDistribution;
 import org.gephi.statistics.plugin.GraphDistance;
 import org.openide.util.Lookup;
 
@@ -142,7 +143,7 @@ public class Graph {
 	// http://wiki.gephi.org/index.php/Toolkit_-_Statistics_and_Metrics
 	public Map<String, Double> getNodesCentrality() {
 		Map<String, Double> results = new HashMap<String, Double>();
-		
+
 		// Get graph model and attribute model of current workspace
 		GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
 		AttributeModel attributeModel = Lookup.getDefault().lookup(AttributeController.class).getModel();
@@ -152,16 +153,28 @@ public class Graph {
 		distance.setDirected(true);
 		distance.setRelative(false);
 		distance.execute(graphModel, attributeModel);
-		
+
 		// Get Centrality column created
-		AttributeColumn col = attributeModel.getNodeTable().getColumn(GraphDistance.CLOSENESS);
+		AttributeColumn col = attributeModel.getNodeTable().getColumn(GraphDistance.BETWEENNESS);
 
 		// Iterate over values
 		for (Node n : directedGraph.getNodes()) {
 			Double centrality = (Double) n.getNodeData().getAttributes().getValue(col.getIndex());
 			results.put(n.getNodeData().getLabel(), centrality);
 		}
-		
+
+		return results;
+	}
+
+	/**
+	 * @return
+	 */
+	public Map<String, Double> getNodesDegree() {
+		Map<String, Double> results = new HashMap<String, Double>();
+
+		for (Node node : directedGraph.getNodes())
+			results.put(node.getNodeData().getLabel(), Double.valueOf(directedGraph.getDegree(node)));
+
 		return results;
 	}
 
