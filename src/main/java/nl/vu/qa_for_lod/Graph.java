@@ -6,6 +6,7 @@ package nl.vu.qa_for_lod;
 import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -88,6 +89,14 @@ public class Graph {
 	}
 
 	/**
+	 * @param statements
+	 */
+	public void addStatements(Collection<Statement> statements) {
+		for (Statement statement : statements)
+			this.addStatement(statement);
+	}
+
+	/**
 	 * @param resource
 	 * @return
 	 */
@@ -142,9 +151,7 @@ public class Graph {
 	 * @return A list of nodes name with their centrality value
 	 */
 	// http://wiki.gephi.org/index.php/Toolkit_-_Statistics_and_Metrics
-	public Results getNodesCentrality() {
-		Results results = new Results();
-
+	public void getNodesCentrality(Results results) {
 		// Get graph model and attribute model of current workspace
 		GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
 		AttributeModel attributeModel = Lookup.getDefault().lookup(AttributeController.class).getModel();
@@ -161,28 +168,20 @@ public class Graph {
 			Double centrality = (Double) n.getNodeData().getAttributes().getValue(col);
 			results.put(n.getNodeData().getLabel(), centrality);
 		}
-
-		return results;
 	}
 
 	/**
 	 * @return
 	 */
-	public Results getNodesDegree() {
-		Results results = new Results();
-
+	public void getNodesDegree(Results results) {
 		for (Node node : directedGraph.getNodes())
 			results.put(node.getNodeData().getLabel(), Double.valueOf(directedGraph.getDegree(node)));
-
-		return results;
 	}
 
 	/**
 	 * @return
 	 */
-	public Results getNodesPopularity() {
-		Results results = new Results();
-
+	public void getNodesPopularity(Results results) {
 		// Get graph model and attribute model of current workspace
 		GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
 		AttributeModel attributeModel = Lookup.getDefault().lookup(AttributeController.class).getModel();
@@ -198,8 +197,6 @@ public class Graph {
 			Double centrality = (Double) n.getNodeData().getAttributes().getValue(col);
 			results.put(n.getNodeData().getLabel(), centrality);
 		}
-
-		return results;
 	}
 
 	/**

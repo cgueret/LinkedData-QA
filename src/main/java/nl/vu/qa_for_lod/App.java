@@ -1,5 +1,7 @@
 package nl.vu.qa_for_lod;
 
+import nl.vu.qa_for_lod.metrics.Centrality;
+import nl.vu.qa_for_lod.metrics.Degree;
 import nl.vu.qa_for_lod.metrics.Popularity;
 
 import org.slf4j.Logger;
@@ -14,17 +16,20 @@ public class App {
 
 		// Load the seed file
 		SeedFile seedFile = new SeedFile("data/links-cut.nt");
+		logger.info("Number of seeds = " + seedFile.getSeedResources().size());
 
 		// Load the graph around the seed Resources
 		graph.loadGraphFromSeeds(seedFile.getSeedResources());
 		logger.info("Graph => " + graph.getStats());
 
 		// Dump the graph into external files
-		graph.dump("/tmp/graph");
+		// graph.dump("/tmp/graph");
 
 		// Run the analysis
 		GraphMetrics metrics = new GraphMetrics(graph, seedFile);
-		metrics.addMetric(new Popularity(graph));
+		metrics.addMetric(new Popularity());
+		metrics.addMetric(new Degree());
+		metrics.addMetric(new Centrality());
 		metrics.process();
 	}
 }

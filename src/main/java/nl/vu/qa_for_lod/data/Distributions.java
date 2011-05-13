@@ -16,16 +16,16 @@ import java.util.Map.Entry;
  * @author Christophe Guéret <christophe.gueret@gmail.com>
  * 
  */
-public class Distribution extends HashMap<Integer, Map<String, Integer>> {
+public class Distributions extends HashMap<Integer, Map<String, Integer>> {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -8746268674977907936L;
 
-	public Distribution() {
+	public Distributions() {
 		// Initialise the keys
 		for (int key = 0; key < 101; key++)
-			this.put(key, new HashMap<String, Integer>());
+			put(Integer.valueOf(key), new HashMap<String, Integer>());
 	}
 
 	/**
@@ -41,7 +41,7 @@ public class Distribution extends HashMap<Integer, Map<String, Integer>> {
 
 		try {
 			Writer file = new FileWriter(fileName);
-			
+
 			// Print the headers
 			StringBuffer header = new StringBuffer();
 			header.append("# Percent");
@@ -57,7 +57,7 @@ public class Distribution extends HashMap<Integer, Map<String, Integer>> {
 					row.append(" ").append(this.get(key).get(name));
 				file.write(row.append("\n").toString());
 			}
-			
+
 			file.close();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -86,6 +86,22 @@ public class Distribution extends HashMap<Integer, Map<String, Integer>> {
 			int key = (int) (100 * (result.getValue() / max));
 			Map<String, Integer> row = this.get(key);
 			row.put(name, row.get(name) + 1);
+		}
+	}
+
+	/**
+	 * @param distribution
+	 * @param name
+	 */
+	public void insert(Map<Integer, Integer> distribution, String name) {
+		// Initialise the results
+		for (Entry<Integer, Map<String, Integer>> entry : entrySet())
+			entry.getValue().put(name, 0);
+
+		// Save the values
+		for (Entry<Integer, Integer> result : distribution.entrySet()) {
+			Map<String, Integer> row = get(result.getKey());
+			row.put(name, result.getValue());
 		}
 	}
 }
