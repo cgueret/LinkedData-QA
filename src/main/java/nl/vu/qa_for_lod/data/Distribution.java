@@ -1,7 +1,7 @@
 /**
  * 
  */
-package nl.vu.qa_for_lod;
+package nl.vu.qa_for_lod.data;
 
 import java.io.FileWriter;
 import java.io.IOException;

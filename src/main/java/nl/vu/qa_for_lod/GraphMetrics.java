@@ -11,7 +11,10 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 
-import com.hp.hpl.jena.rdf.model.Resource;
+import nl.vu.qa_for_lod.data.Distribution;
+import nl.vu.qa_for_lod.data.Results;
+import nl.vu.qa_for_lod.data.Statistics;
+
 import com.hp.hpl.jena.rdf.model.Statement;
 
 /**
@@ -46,6 +49,7 @@ public class GraphMetrics {
 		// Compare the results before and after
 		compareResults(statistics, "centrality");
 		compareResults(statistics, "degree");
+		compareResults(statistics, "popularity");
 
 		// Save the distribution table
 		distributions.write("/tmp/distributions.dat");
@@ -64,7 +68,7 @@ public class GraphMetrics {
 			diffs.put(entry.getKey(), difference);
 		}
 
-		// Print the top 10
+		// Print the top 5
 		List<String> output = new ArrayList<String>();
 		Set<Double> keys = new TreeSet<Double>();
 		keys.addAll(diffs.values());
@@ -83,12 +87,15 @@ public class GraphMetrics {
 	 */
 	private void runMetrics(Statistics statistics, Distribution distributions) {
 		// Run the metrics and save the results
-		Map<String, Double> nodesCentrality = graph.getNodesCentrality();
+		Results nodesCentrality = graph.getNodesCentrality();
 		statistics.saveResults(nodesCentrality, "centrality_before");
 		distributions.saveResults(nodesCentrality, "centrality_before");
-		Map<String, Double> nodesDegree = graph.getNodesDegree();
+		Results nodesDegree = graph.getNodesDegree();
 		statistics.saveResults(nodesDegree, "degree_before");
 		distributions.saveResults(nodesDegree, "degree_before");
+		Results nodesPopularity = graph.getNodesPopularity();
+		statistics.saveResults(nodesPopularity, "popularity_before");
+		distributions.saveResults(nodesPopularity, "popularity_before");
 
 		// Add the new triples
 		for (Statement statement : seedFile.getStatements())
@@ -101,6 +108,9 @@ public class GraphMetrics {
 		nodesDegree = graph.getNodesDegree();
 		statistics.saveResults(nodesDegree, "degree_after");
 		distributions.saveResults(nodesDegree, "degree_after");
+		nodesPopularity = graph.getNodesPopularity();
+		statistics.saveResults(nodesPopularity, "popularity_after");
+		distributions.saveResults(nodesPopularity, "popularity_after");
 	}
 
 }

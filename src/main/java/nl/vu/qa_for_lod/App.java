@@ -1,5 +1,7 @@
 package nl.vu.qa_for_lod;
 
+import nl.vu.qa_for_lod.metrics.Popularity;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +24,7 @@ public class App {
 
 		// Run the analysis
 		GraphMetrics metrics = new GraphMetrics(graph, seedFile);
+		metrics.addMetric(new Popularity(graph));
 		metrics.process();
 	}
 }

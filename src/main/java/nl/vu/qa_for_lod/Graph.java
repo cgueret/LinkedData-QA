@@ -6,12 +6,11 @@ package nl.vu.qa_for_lod;
 import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
-import org.gephi.data.attributes.api.AttributeColumn;
+import nl.vu.qa_for_lod.data.Results;
+
 import org.gephi.data.attributes.api.AttributeController;
 import org.gephi.data.attributes.api.AttributeModel;
 import org.gephi.graph.api.DirectedGraph;
@@ -25,8 +24,8 @@ import org.gephi.preview.api.EdgeColorizer;
 import org.gephi.preview.api.PreviewController;
 import org.gephi.preview.api.PreviewModel;
 import org.gephi.project.api.ProjectController;
-import org.gephi.statistics.plugin.DegreeDistribution;
 import org.gephi.statistics.plugin.GraphDistance;
+import org.gephi.statistics.plugin.PageRank;
 import org.openide.util.Lookup;
 
 import com.hp.hpl.jena.rdf.model.Property;
@@ -138,11 +137,13 @@ public class Graph {
 	}
 
 	/**
-	 * @return
+	 * Compute the centrality of all the nodes in the network
+	 * 
+	 * @return A list of nodes name with their centrality value
 	 */
 	// http://wiki.gephi.org/index.php/Toolkit_-_Statistics_and_Metrics
-	public Map<String, Double> getNodesCentrality() {
-		Map<String, Double> results = new HashMap<String, Double>();
+	public Results getNodesCentrality() {
+		Results results = new Results();
 
 		// Get graph model and attribute model of current workspace
 		GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
@@ -154,12 +155,10 @@ public class Graph {
 		distance.setRelative(false);
 		distance.execute(graphModel, attributeModel);
 
-		// Get Centrality column created
-		AttributeColumn col = attributeModel.getNodeTable().getColumn(GraphDistance.BETWEENNESS);
-
 		// Iterate over values
+		int col = attributeModel.getNodeTable().getColumn(GraphDistance.BETWEENNESS).getIndex();
 		for (Node n : directedGraph.getNodes()) {
-			Double centrality = (Double) n.getNodeData().getAttributes().getValue(col.getIndex());
+			Double centrality = (Double) n.getNodeData().getAttributes().getValue(col);
 			results.put(n.getNodeData().getLabel(), centrality);
 		}
 
@@ -169,11 +168,36 @@ public class Graph {
 	/**
 	 * @return
 	 */
-	public Map<String, Double> getNodesDegree() {
-		Map<String, Double> results = new HashMap<String, Double>();
+	public Results getNodesDegree() {
+		Results results = new Results();
 
 		for (Node node : directedGraph.getNodes())
 			results.put(node.getNodeData().getLabel(), Double.valueOf(directedGraph.getDegree(node)));
+
+		return results;
+	}
+
+	/**
+	 * @return
+	 */
+	public Results getNodesPopularity() {
+		Results results = new Results();
+
+		// Get graph model and attribute model of current workspace
+		GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
+		AttributeModel attributeModel = Lookup.getDefault().lookup(AttributeController.class).getModel();
+
+		// Get PageRank
+		PageRank pageRank = new PageRank();
+		pageRank.setUndirected(false);
+		pageRank.execute(graphModel, attributeModel);
+
+		// Place the results in the results class
+		int col = attributeModel.getNodeTable().getColumn(PageRank.PAGERANK).getIndex();
+		for (Node n : directedGraph.getNodes()) {
+			Double centrality = (Double) n.getNodeData().getAttributes().getValue(col);
+			results.put(n.getNodeData().getLabel(), centrality);
+		}
 
 		return results;
 	}
