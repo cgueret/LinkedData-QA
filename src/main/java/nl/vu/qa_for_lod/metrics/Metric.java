@@ -14,6 +14,7 @@ import java.util.Map.Entry;
 import com.hp.hpl.jena.rdf.model.Resource;
 
 import nl.vu.qa_for_lod.Graph;
+import nl.vu.qa_for_lod.data.Distribution;
 import nl.vu.qa_for_lod.data.Results;
 
 /**
@@ -30,6 +31,7 @@ public abstract class Metric {
 
 	protected final Results resultsBefore = new Results();
 	protected final Results resultsAfter = new Results();
+	private final Distribution distribution = new Distribution();
 	protected boolean isGreen = true;
 
 	/**
@@ -43,6 +45,10 @@ public abstract class Metric {
 
 		results.clear();
 		this.go(graph, results, state);
+
+		// Save the distribution
+		for (Entry<String, Double> r : results.entrySet())
+			distribution.increaseCounter(r.getValue(), state);
 	}
 
 	/**
@@ -132,6 +138,13 @@ public abstract class Metric {
 	 * @return
 	 */
 	public abstract String getName();
+
+	/**
+	 * @return the distribution
+	 */
+	public Distribution getDistribution() {
+		return distribution;
+	}
 }
 
 /*

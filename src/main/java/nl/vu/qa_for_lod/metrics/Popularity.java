@@ -15,6 +15,7 @@ import nl.vu.qa_for_lod.data.Results;
  * 
  * @author Christophe Guéret <christophe.gueret@gmail.com>
  */
+// http://stackoverflow.com/questions/153724/how-to-round-a-number-to-n-decimal-places-in-java
 public class Popularity extends Metric {
 	/*
 	 * (non-Javadoc)

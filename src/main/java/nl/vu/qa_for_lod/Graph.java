@@ -8,10 +8,14 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
+import nl.vu.qa_for_lod.data.Distribution;
 import nl.vu.qa_for_lod.data.Results;
+import nl.vu.qa_for_lod.metrics.Metric.MetricState;
 
 import org.gephi.data.attributes.api.AttributeController;
 import org.gephi.data.attributes.api.AttributeModel;
@@ -179,9 +183,11 @@ public class Graph {
 	/**
 	 * @return
 	 */
-	public void getNodesDegree(Results results) {
+	public Map<String, Double> getNodesDegree() {
+		Map<String, Double> results = new HashMap<String, Double>();
 		for (Node node : directedGraph.getNodes())
 			results.put(node.getNodeData().getLabel(), Double.valueOf(directedGraph.getDegree(node)));
+		return results;
 	}
 
 	/**
@@ -252,18 +258,26 @@ public class Graph {
 		Set<Resource> neighbours = new HashSet<Resource>();
 
 		// Load the data from the seeds
+		Distribution d = new Distribution();
 		for (Resource resource : seedURIs) {
+			double c = 0;
 			for (Statement stmt : fetcher.get(resource)) {
 				addStatement(stmt);
 				neighbours.add(stmt.getObject().asResource());
+				c = c + 1;
 			}
+			d.increaseCounter(c, MetricState.AFTER);
 		}
+		d.writeToFile("/tmp/expension.dat");
 
 		// Connect the neighbours among them
-		for (Resource resource : neighbours)
-			for (Statement stmt : fetcher.get(resource))
-				if (containsResource(stmt.getObject().asResource()))
+		for (Resource resource : neighbours) {
+			for (Statement stmt : fetcher.get(resource)) {
+				if (containsResource(stmt.getObject().asResource())) {
 					addStatement(stmt);
+				}
+			}
+		}
 
 		// Clean the graph from the nodes which are dead ends
 		Collection<Node> nodes = new ArrayList<Node>();

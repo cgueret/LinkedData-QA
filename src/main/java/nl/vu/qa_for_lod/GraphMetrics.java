@@ -63,6 +63,9 @@ public class GraphMetrics {
 			distributions.insert(metric.getDistribution(MetricState.AFTER), metric.getName() + "_2");
 		}
 		distributions.write("/tmp/distributions.dat");
+
+		for (Metric metric : metrics)
+			metric.getDistribution().writeToFile("/tmp/distribution-" + metric.getName() + ".dat");
 	}
 
 	/**

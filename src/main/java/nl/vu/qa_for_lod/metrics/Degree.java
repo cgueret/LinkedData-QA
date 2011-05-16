@@ -30,7 +30,7 @@ public class Degree extends Metric {
 	@Override
 	protected void go(Graph graph, Results results, MetricState state) {
 		// Save node degrees
-		graph.getNodesDegree(results);
+		results.putAll(graph.getNodesDegree());
 
 		// Compute distance to 2.5 (power law as a factor between 2 and 3)
 		double d = graph.getDegreeDistributionPowerLawFactor();
