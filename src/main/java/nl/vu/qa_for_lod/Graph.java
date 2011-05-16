@@ -6,6 +6,7 @@ package nl.vu.qa_for_lod;
 import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -25,6 +26,7 @@ import org.gephi.preview.api.EdgeColorizer;
 import org.gephi.preview.api.PreviewController;
 import org.gephi.preview.api.PreviewModel;
 import org.gephi.project.api.ProjectController;
+import org.gephi.statistics.plugin.DegreeDistribution;
 import org.gephi.statistics.plugin.GraphDistance;
 import org.gephi.statistics.plugin.PageRank;
 import org.openide.util.Lookup;
@@ -151,7 +153,9 @@ public class Graph {
 	 * @return A list of nodes name with their centrality value
 	 */
 	// http://wiki.gephi.org/index.php/Toolkit_-_Statistics_and_Metrics
-	public void getNodesCentrality(Results results) {
+	public Results getNodesCentrality() {
+		Results results = new Results();
+
 		// Get graph model and attribute model of current workspace
 		GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
 		AttributeModel attributeModel = Lookup.getDefault().lookup(AttributeController.class).getModel();
@@ -168,6 +172,8 @@ public class Graph {
 			Double centrality = (Double) n.getNodeData().getAttributes().getValue(col);
 			results.put(n.getNodeData().getLabel(), centrality);
 		}
+
+		return results;
 	}
 
 	/**
@@ -200,12 +206,37 @@ public class Graph {
 	}
 
 	/**
+	 * @return
+	 */
+	public double getDegreeDistributionPowerLawFactor() {
+		// Get graph model and attribute model of current workspace
+		GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
+		AttributeModel attributeModel = Lookup.getDefault().lookup(AttributeController.class).getModel();
+
+		// Get PageRank
+		DegreeDistribution degreeDistribution = new DegreeDistribution();
+		degreeDistribution.setDirected(false);
+		degreeDistribution.execute(graphModel, attributeModel);
+
+		// Place the results in the results class
+		return degreeDistribution.getCombinedPowerLaw();
+	}
+
+	/**
 	 * Output some stats
 	 */
 	public String getStats() {
+		int deadEnds = 0;
+		for (Node node : directedGraph.getNodes())
+			if (directedGraph.getInDegree(node) > 1)
+				if (directedGraph.getOutDegree(node) == 0)
+					deadEnds++;
+
 		StringBuffer buffer = new StringBuffer();
 		buffer.append("Nodes: ").append(directedGraph.getNodeCount());
 		buffer.append(", Edges: ").append(directedGraph.getEdgeCount());
+		buffer.append(", Dead end: ").append(deadEnds);
+
 		return buffer.toString();
 	}
 
@@ -233,6 +264,18 @@ public class Graph {
 			for (Statement stmt : fetcher.get(resource))
 				if (containsResource(stmt.getObject().asResource()))
 					addStatement(stmt);
+
+		// Clean the graph from the nodes which are dead ends
+		Collection<Node> nodes = new ArrayList<Node>();
+		do {
+			nodes.clear();
+			for (Node node : directedGraph.getNodes())
+				if (directedGraph.getInDegree(node) > 0)
+					if (directedGraph.getOutDegree(node) == 0)
+						nodes.add(node);
+			for (Node node : nodes)
+				directedGraph.removeNode(node);
+		} while (nodes.size() != 0);
 
 		// Close the data fetcher
 		fetcher.close();

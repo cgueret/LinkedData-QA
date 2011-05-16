@@ -12,6 +12,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.Map.Entry;
 
+import nl.vu.qa_for_lod.metrics.Metric;
+
 /**
  * @author Christophe Guéret <christophe.gueret@gmail.com>
  * 
@@ -24,7 +26,7 @@ public class Distributions extends HashMap<Integer, Map<String, Integer>> {
 
 	public Distributions() {
 		// Initialise the keys
-		for (int key = 0; key < 101; key++)
+		for (int key = 0; key < Metric.DISTRIBUTIONS_BINS+1; key++)
 			put(Integer.valueOf(key), new HashMap<String, Integer>());
 	}
 

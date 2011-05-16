@@ -17,28 +17,32 @@ import nl.vu.qa_for_lod.Graph;
 import nl.vu.qa_for_lod.data.Results;
 
 /**
- * @author Christophe Guéret <christophe.gueret@gmail.com>
+ * Generic metric to be inherited by every metric implemented in the framework
  * 
+ * @author Christophe Guéret <christophe.gueret@gmail.com>
  */
 public abstract class Metric {
-	public enum MetricState {
+	public final static Integer DISTRIBUTIONS_BINS = 1000;
+
+	public static enum MetricState {
 		BEFORE, AFTER
 	}
 
 	protected final Results resultsBefore = new Results();
 	protected final Results resultsAfter = new Results();
+	protected boolean isGreen = true;
 
 	/**
 	 * @param state
 	 */
 	public void processGraph(Graph graph, MetricState state) {
-		// Get the requested 
+		// Get the requested
 		Results results = resultsBefore;
 		if (state.equals(MetricState.AFTER))
 			results = resultsAfter;
 
 		results.clear();
-		this.go(graph, results);		
+		this.go(graph, results, state);
 	}
 
 	/**
@@ -46,7 +50,7 @@ public abstract class Metric {
 	 * 
 	 * @param number
 	 *            The number of nodes to return
-	 * @param resources 
+	 * @param resources
 	 * @return an ordered list of the top suspicious nodes according to the
 	 *         metric
 	 */
@@ -54,11 +58,11 @@ public abstract class Metric {
 		// Get the list of nodes for which we have before and after results
 		Set<String> keys = new TreeSet<String>(resultsBefore.keySet());
 		keys.retainAll(resultsAfter.keySet());
-		
+
 		// If we want to filter, get only the relevant keys
 		if (resources != null) {
 			Set<String> tmp = new TreeSet<String>();
-			for (Resource r: resources)
+			for (Resource r : resources)
 				tmp.add(r.toString());
 			keys.retainAll(tmp);
 		}
@@ -93,7 +97,7 @@ public abstract class Metric {
 
 		// Initialise the results table
 		Map<Integer, Integer> output = new HashMap<Integer, Integer>();
-		for (int key = 0; key < 101; key++)
+		for (int key = 0; key < DISTRIBUTIONS_BINS + 1; key++)
 			output.put(new Integer(key), new Integer(0));
 
 		// Find the highest value
@@ -104,7 +108,7 @@ public abstract class Metric {
 
 		// Fill the distribution table
 		for (Entry<String, Double> result : results.entrySet()) {
-			Integer key = Integer.valueOf((int) (100 * (result.getValue() / max)));
+			Integer key = Integer.valueOf((int) (DISTRIBUTIONS_BINS * (result.getValue() / max)));
 			output.put(key, output.get(key) + 1);
 		}
 
@@ -112,12 +116,27 @@ public abstract class Metric {
 	}
 
 	/**
-	 * @param results
+	 * @return
 	 */
-	protected abstract void go(Graph graph, Results results);
+	public boolean isGreen() {
+		return isGreen;
+	}
+
+	/**
+	 * @param results
+	 * @param state
+	 */
+	protected abstract void go(Graph graph, Results results, MetricState state);
 
 	/**
 	 * @return
 	 */
 	public abstract String getName();
 }
+
+/*
+ * http://stackoverflow.com/questions/507602/how-to-initialise-a-static-map-in-java
+ * static { Map<MetricState, Double> map = new HashMap<MetricState, Double>();
+ * map.put(MetricState.AFTER, 0.0); map.put(MetricState.BEFORE, 0.0);
+ * DISTANCE_TO_POWER_LAW = Collections.unmodifiableMap(map); }
+ */

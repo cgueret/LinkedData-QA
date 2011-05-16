@@ -30,6 +30,13 @@ public class App {
 		metrics.addMetric(new Popularity());
 		metrics.addMetric(new Degree());
 		metrics.addMetric(new Centrality());
+		// TODO add a metric to detect when most mappings are 1-1 and some 1-M
+		// (then they are suspicious)
+
+		// Run all the metrics
 		metrics.process();
+		
+		// Print the execution report
+		metrics.printReport();
 	}
 }

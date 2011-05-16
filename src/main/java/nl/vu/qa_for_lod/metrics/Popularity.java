@@ -7,8 +7,13 @@ import nl.vu.qa_for_lod.Graph;
 import nl.vu.qa_for_lod.data.Results;
 
 /**
- * @author Christophe Guéret <christophe.gueret@gmail.com>
+ * Metric measuring the popularity of the nodes. Assuming the presence of highly
+ * popular resources and a community effect around them, the observed
+ * distribution should be a (mixture of) Gaussian
  * 
+ * Target distribution: Gaussian
+ * 
+ * @author Christophe Guéret <christophe.gueret@gmail.com>
  */
 public class Popularity extends Metric {
 	/*
@@ -17,7 +22,7 @@ public class Popularity extends Metric {
 	 * @see nl.vu.qa_for_lod.metrics.Metric#go(nl.vu.qa_for_lod.data.Results)
 	 */
 	@Override
-	protected void go(Graph graph, Results results) {
+	protected void go(Graph graph, Results results, MetricState state) {
 		graph.getNodesPopularity(results);
 	}
 

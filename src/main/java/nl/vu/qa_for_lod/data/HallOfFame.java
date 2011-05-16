@@ -3,9 +3,12 @@
  */
 package nl.vu.qa_for_lod.data;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.Map.Entry;
 
 /**
@@ -46,8 +49,13 @@ public class HallOfFame {
 	 * 
 	 */
 	public void print() {
-		for (Entry<String, Double> entry : scores.entrySet())
-			System.out.println(entry.getValue() + " " + entry.getKey());
+		TreeSet<Double> keys = new TreeSet<Double>();
+		keys.addAll(scores.values());
+		
+		for (Double key: keys.descendingSet())
+			for (Entry<String, Double> entry : scores.entrySet())
+				if (entry.getValue().equals(key))
+					System.out.println(entry.getValue() + " " + entry.getKey());
 	}
 
 }

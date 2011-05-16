@@ -49,6 +49,7 @@ public class DataFetcher {
 		THIS = model.createResource("http://example.org/this");
 		HAS_BLACK_LIST = model.createProperty("http://example.org/blacklisted");
 
+		// HACK Force re-try
 		// model.removeAll(THIS, HAS_BLACK_LIST, null);
 	}
 
@@ -108,7 +109,7 @@ public class DataFetcher {
 	 * @throws Exception
 	 */
 	private void getData(Model m, String URI) throws Exception {
-		// TODO: try to get the data from a SPARQL end point
+		// TODO try to get the data from a SPARQL end point
 		// http://sparql.sindice.com/sparql
 		// http://lod.openlinksw.com/sparql
 		StringBuffer query = new StringBuffer();
@@ -129,7 +130,7 @@ public class DataFetcher {
 		HttpEntity entity = null;
 		HttpGet httpget = null;
 		HttpClient httpclient = null;
-
+		
 		try {
 			httpclient = new DefaultHttpClient();
 			httpget = new HttpGet(URI);
@@ -141,9 +142,12 @@ public class DataFetcher {
 		}
 
 		// If we don't get it, return
-		if (entity == null || !entity.getContentType().getValue().startsWith("application/rdf+xml"))
+		// TODO If the entity was not an RDF resource, remove the node from the graph
+		if (entity == null || entity.getContentType() == null || !entity.getContentType().getValue().startsWith("application/rdf+xml")) {
+			System.out.println(URI); 
 			return;
-
+		}
+		
 		InputStream instream = entity.getContent();
 		try {
 			m.read(new InputStreamReader(instream), null);
