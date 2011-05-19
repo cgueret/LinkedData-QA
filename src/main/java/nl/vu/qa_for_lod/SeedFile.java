@@ -40,7 +40,7 @@ public class SeedFile {
 
 		// Iterate through the content of the seed and create the graph
 		StmtIterator iter = model.listStatements();
-		int max = 25;
+		int max = 2500000;
 		while (iter.hasNext() && max-- != 0) {
 			Statement stmt = iter.nextStatement();
 			if (!(stmt.getObject() instanceof Resource))

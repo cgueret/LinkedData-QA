@@ -49,7 +49,7 @@ public class HallOfFame {
 	public void print() {
 		TreeSet<Double> keys = new TreeSet<Double>();
 		keys.addAll(scores.values());
-
+		
 		for (Double key : keys.descendingSet())
 			for (Entry<String, Double> entry : scores.entrySet())
 				if (entry.getValue().equals(key))

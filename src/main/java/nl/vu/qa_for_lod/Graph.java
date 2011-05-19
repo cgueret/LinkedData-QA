@@ -269,7 +269,11 @@ public class Graph {
 			}
 			d.increaseCounter(c);
 		}
-		d.writeToFile("/tmp/expension.dat");
+		try {
+			d.writeToFile("/tmp/expension.dat");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 
 		// Connect the neighbours among them
 		for (Resource resource : neighbours) {

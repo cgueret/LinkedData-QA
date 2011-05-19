@@ -3,8 +3,13 @@
  */
 package nl.vu.qa_for_lod.metrics.impl;
 
+import java.util.Map.Entry;
+
+import org.apache.commons.math.distribution.NormalDistributionImpl;
+
 import nl.vu.qa_for_lod.Graph;
 import nl.vu.qa_for_lod.metrics.Distribution;
+import nl.vu.qa_for_lod.metrics.Distribution.Axis;
 import nl.vu.qa_for_lod.metrics.Metric;
 import nl.vu.qa_for_lod.metrics.Results;
 
@@ -27,7 +32,21 @@ public class Popularity implements Metric {
 	 * qa_for_lod.data.Distribution)
 	 */
 	public double getDistanceToIdealDistribution(Distribution distribution) {
-		return 0;
+		// Normalise the distribution to get probabilities instead of node count
+		distribution.normalize();
+
+		// Create the ideal distribution
+		double sd = distribution.standardDeviation(Axis.Y);
+		double mean = distribution.mean(Axis.Y);
+		NormalDistributionImpl t = new NormalDistributionImpl(mean, sd);
+
+		// Measure the distance
+		double d = 0;
+		for (Entry<Double, Double> point : distribution.entrySet())
+			d += Math.abs(t.density(point.getKey().doubleValue()) - point.getValue());
+			
+		return d;
+
 	}
 
 	/*
@@ -36,7 +55,7 @@ public class Popularity implements Metric {
 	 * @see nl.vu.qa_for_lod.metrics.Metric#getName()
 	 */
 	public String getName() {
-		return "popularity";
+		return "Popularity";
 	}
 
 	/*
@@ -47,5 +66,4 @@ public class Popularity implements Metric {
 	public Results getResults(Graph graph) {
 		return graph.getNodesPopularity();
 	}
-
 }

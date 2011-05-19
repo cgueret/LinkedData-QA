@@ -44,7 +44,7 @@ public class Centrality implements Metric {
 	 * @see nl.vu.qa_for_lod.metrics.Metric#getName()
 	 */
 	public String getName() {
-		return "centrality";
+		return "Centrality";
 	}
 
 	/*

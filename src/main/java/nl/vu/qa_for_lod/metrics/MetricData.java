@@ -110,6 +110,15 @@ public class MetricData {
 	}
 
 	/**
+	 * @return
+	 */
+	public double getRatioDistanceChange() {
+		if (distanceMap.get(MetricState.BEFORE) == 0)
+			return 0;
+		return 100 * (distanceMap.get(MetricState.AFTER) / distanceMap.get(MetricState.BEFORE));
+	}
+
+	/**
 	 * @param state
 	 * @param distanceToIdealDistribution
 	 */
