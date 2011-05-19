@@ -8,14 +8,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
-import nl.vu.qa_for_lod.data.Distribution;
-import nl.vu.qa_for_lod.data.Results;
-import nl.vu.qa_for_lod.metrics.Metric.MetricState;
+import nl.vu.qa_for_lod.metrics.Distribution;
+import nl.vu.qa_for_lod.metrics.Results;
 
 import org.gephi.data.attributes.api.AttributeController;
 import org.gephi.data.attributes.api.AttributeModel;
@@ -144,6 +141,23 @@ public class Graph {
 	/**
 	 * @return
 	 */
+	public double getDegreeDistributionPowerLawFactor() {
+		// Get graph model and attribute model of current workspace
+		GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
+		AttributeModel attributeModel = Lookup.getDefault().lookup(AttributeController.class).getModel();
+
+		// Get PageRank
+		DegreeDistribution degreeDistribution = new DegreeDistribution();
+		degreeDistribution.setDirected(false);
+		degreeDistribution.execute(graphModel, attributeModel);
+
+		// Place the results in the results class
+		return degreeDistribution.getCombinedPowerLaw();
+	}
+
+	/**
+	 * @return
+	 */
 	public Set<Node> getNodes() {
 		Set<Node> nodes = new HashSet<Node>();
 		for (Node node : graphModel.getGraph().getNodes())
@@ -183,8 +197,8 @@ public class Graph {
 	/**
 	 * @return
 	 */
-	public Map<String, Double> getNodesDegree() {
-		Map<String, Double> results = new HashMap<String, Double>();
+	public Results getNodesDegree() {
+		Results results = new Results();
 		for (Node node : directedGraph.getNodes())
 			results.put(node.getNodeData().getLabel(), Double.valueOf(directedGraph.getDegree(node)));
 		return results;
@@ -193,7 +207,9 @@ public class Graph {
 	/**
 	 * @return
 	 */
-	public void getNodesPopularity(Results results) {
+	public Results getNodesPopularity() {
+		Results results = new Results();
+
 		// Get graph model and attribute model of current workspace
 		GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
 		AttributeModel attributeModel = Lookup.getDefault().lookup(AttributeController.class).getModel();
@@ -209,23 +225,8 @@ public class Graph {
 			Double centrality = (Double) n.getNodeData().getAttributes().getValue(col);
 			results.put(n.getNodeData().getLabel(), centrality);
 		}
-	}
 
-	/**
-	 * @return
-	 */
-	public double getDegreeDistributionPowerLawFactor() {
-		// Get graph model and attribute model of current workspace
-		GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
-		AttributeModel attributeModel = Lookup.getDefault().lookup(AttributeController.class).getModel();
-
-		// Get PageRank
-		DegreeDistribution degreeDistribution = new DegreeDistribution();
-		degreeDistribution.setDirected(false);
-		degreeDistribution.execute(graphModel, attributeModel);
-
-		// Place the results in the results class
-		return degreeDistribution.getCombinedPowerLaw();
+		return results;
 	}
 
 	/**
@@ -266,7 +267,7 @@ public class Graph {
 				neighbours.add(stmt.getObject().asResource());
 				c = c + 1;
 			}
-			d.increaseCounter(c, MetricState.AFTER);
+			d.increaseCounter(c);
 		}
 		d.writeToFile("/tmp/expension.dat");
 

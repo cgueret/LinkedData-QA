@@ -35,10 +35,10 @@ import com.hp.hpl.jena.tdb.TDBFactory;
 // TODO Keep connection open and check
 // http://stackoverflow.com/questions/4612573/exception-using-httprequest-execute-invalid-use-of-singleclientconnmanager-co
 public class DataFetcher {
-	protected final Logger logger = LoggerFactory.getLogger(DataFetcher.class);
-	private final Model model;
-
 	private final Property HAS_BLACK_LIST;
+	protected final Logger logger = LoggerFactory.getLogger(DataFetcher.class);
+
+	private final Model model;
 	private final Resource THIS;
 
 	/**
@@ -51,6 +51,56 @@ public class DataFetcher {
 
 		// HACK Force re-try
 		// model.removeAll(THIS, HAS_BLACK_LIST, null);
+	}
+
+	/**
+	 * Close all the connections and flush the data remaining in memory
+	 */
+	public void close() {
+		model.close();
+	}
+
+	/**
+	 * @param URI
+	 * @return
+	 * @throws Exception
+	 */
+	private void deferenceResource(Model m, String URI) throws Exception {
+		// Ask for some RDF XML content
+		HttpEntity entity = null;
+		HttpGet httpget = null;
+		HttpClient httpclient = null;
+
+		try {
+			httpclient = new DefaultHttpClient();
+			httpget = new HttpGet(URI);
+			httpget.setHeader("Accept", "application/rdf+xml");
+			HttpResponse response = httpclient.execute(httpget);
+			entity = response.getEntity();
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+
+		// If we don't get it, return
+		// TODO If the entity was not an RDF resource, remove the node from the
+		// graph
+		if (entity == null || entity.getContentType() == null
+				|| !entity.getContentType().getValue().startsWith("application/rdf+xml")) {
+			System.out.println(URI);
+			return;
+		}
+
+		InputStream instream = entity.getContent();
+		try {
+			m.read(new InputStreamReader(instream), null);
+		} catch (Exception ex) {
+			httpget.abort();
+		} finally {
+			instream.close();
+			httpclient.getConnectionManager().shutdown();
+		}
+
+		System.out.println("Loaded " + m.size() + " triples from " + URI);
 	}
 
 	/**
@@ -118,53 +168,5 @@ public class DataFetcher {
 		// If we don't get any triple, try to de-reference the URI
 		if (m.size() == 0)
 			deferenceResource(m, URI);
-	}
-
-	/**
-	 * @param URI
-	 * @return
-	 * @throws Exception
-	 */
-	private void deferenceResource(Model m, String URI) throws Exception {
-		// Ask for some RDF XML content
-		HttpEntity entity = null;
-		HttpGet httpget = null;
-		HttpClient httpclient = null;
-		
-		try {
-			httpclient = new DefaultHttpClient();
-			httpget = new HttpGet(URI);
-			httpget.setHeader("Accept", "application/rdf+xml");
-			HttpResponse response = httpclient.execute(httpget);
-			entity = response.getEntity();
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-
-		// If we don't get it, return
-		// TODO If the entity was not an RDF resource, remove the node from the graph
-		if (entity == null || entity.getContentType() == null || !entity.getContentType().getValue().startsWith("application/rdf+xml")) {
-			System.out.println(URI); 
-			return;
-		}
-		
-		InputStream instream = entity.getContent();
-		try {
-			m.read(new InputStreamReader(instream), null);
-		} catch (Exception ex) {
-			httpget.abort();
-		} finally {
-			instream.close();
-			httpclient.getConnectionManager().shutdown();
-		}
-
-		System.out.println("Loaded " + m.size() + " triples from " + URI);
-	}
-
-	/**
-	 * Close all the connections and flush the data remaining in memory
-	 */
-	public void close() {
-		model.close();
 	}
 }

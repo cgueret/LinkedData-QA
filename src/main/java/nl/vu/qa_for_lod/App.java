@@ -1,8 +1,9 @@
 package nl.vu.qa_for_lod;
 
-import nl.vu.qa_for_lod.metrics.Centrality;
-import nl.vu.qa_for_lod.metrics.Degree;
-import nl.vu.qa_for_lod.metrics.Popularity;
+import nl.vu.qa_for_lod.metrics.impl.Centrality;
+import nl.vu.qa_for_lod.metrics.impl.Degree;
+import nl.vu.qa_for_lod.metrics.impl.Popularity;
+import nl.vu.qa_for_lod.report.MetricsContainer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +27,7 @@ public class App {
 		// graph.dump("/tmp/graph");
 
 		// Run the analysis
-		GraphMetrics metrics = new GraphMetrics(graph, seedFile);
+		MetricsContainer metrics = new MetricsContainer(graph, seedFile);
 		metrics.addMetric(new Popularity());
 		metrics.addMetric(new Degree());
 		metrics.addMetric(new Centrality());
@@ -35,7 +36,7 @@ public class App {
 
 		// Run all the metrics
 		metrics.process();
-		
+
 		// Print the execution report
 		metrics.printReport();
 	}

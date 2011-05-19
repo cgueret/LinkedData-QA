@@ -1,7 +1,7 @@
 /**
  * 
  */
-package nl.vu.qa_for_lod.data;
+package nl.vu.qa_for_lod.report;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -12,22 +12,60 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.Map.Entry;
 
-import nl.vu.qa_for_lod.metrics.Metric;
-
 /**
  * @author Christophe Guéret <christophe.gueret@gmail.com>
  * 
  */
-public class Distributions extends HashMap<Integer, Map<String, Integer>> {
+public class DistributionsTable extends HashMap<Integer, Map<String, Integer>> {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -8746268674977907936L;
 
-	public Distributions() {
+	public DistributionsTable() {
 		// Initialise the keys
-		for (int key = 0; key < Metric.DISTRIBUTIONS_BINS+1; key++)
+		for (int key = 0; key < 1000 + 1; key++)
 			put(Integer.valueOf(key), new HashMap<String, Integer>());
+	}
+
+	/**
+	 * @param distribution
+	 * @param name
+	 */
+	public void insert(Map<Integer, Integer> distribution, String name) {
+		// Initialise the results
+		for (Entry<Integer, Map<String, Integer>> entry : entrySet())
+			entry.getValue().put(name, 0);
+
+		// Save the values
+		for (Entry<Integer, Integer> result : distribution.entrySet()) {
+			Map<String, Integer> row = get(result.getKey());
+			row.put(name, result.getValue());
+		}
+	}
+
+	/**
+	 * @param results
+	 * @param key
+	 * @param distributions
+	 */
+	public void saveResults(Map<String, Double> results, String name) {
+		// Initialise results
+		for (Entry<Integer, Map<String, Integer>> entry : this.entrySet())
+			entry.getValue().put(name, 0);
+
+		// Find the highest value
+		Double max = Double.MIN_VALUE;
+		for (Entry<String, Double> result : results.entrySet())
+			if (result.getValue() > max)
+				max = result.getValue();
+
+		// Fill the distribution table
+		for (Entry<String, Double> result : results.entrySet()) {
+			int key = (int) (100 * (result.getValue() / max));
+			Map<String, Integer> row = this.get(key);
+			row.put(name, row.get(name) + 1);
+		}
 	}
 
 	/**
@@ -65,45 +103,5 @@ public class Distributions extends HashMap<Integer, Map<String, Integer>> {
 			e.printStackTrace();
 		}
 
-	}
-
-	/**
-	 * @param results
-	 * @param key
-	 * @param distributions
-	 */
-	public void saveResults(Map<String, Double> results, String name) {
-		// Initialise results
-		for (Entry<Integer, Map<String, Integer>> entry : this.entrySet())
-			entry.getValue().put(name, 0);
-
-		// Find the highest value
-		Double max = Double.MIN_VALUE;
-		for (Entry<String, Double> result : results.entrySet())
-			if (result.getValue() > max)
-				max = result.getValue();
-
-		// Fill the distribution table
-		for (Entry<String, Double> result : results.entrySet()) {
-			int key = (int) (100 * (result.getValue() / max));
-			Map<String, Integer> row = this.get(key);
-			row.put(name, row.get(name) + 1);
-		}
-	}
-
-	/**
-	 * @param distribution
-	 * @param name
-	 */
-	public void insert(Map<Integer, Integer> distribution, String name) {
-		// Initialise the results
-		for (Entry<Integer, Map<String, Integer>> entry : entrySet())
-			entry.getValue().put(name, 0);
-
-		// Save the values
-		for (Entry<Integer, Integer> result : distribution.entrySet()) {
-			Map<String, Integer> row = get(result.getKey());
-			row.put(name, result.getValue());
-		}
 	}
 }

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package nl.vu.qa_for_lod.data;
+package nl.vu.qa_for_lod.metrics;
 
 import java.util.HashMap;
 

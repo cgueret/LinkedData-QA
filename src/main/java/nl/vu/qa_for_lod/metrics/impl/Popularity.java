@@ -1,10 +1,12 @@
 /**
  * 
  */
-package nl.vu.qa_for_lod.metrics;
+package nl.vu.qa_for_lod.metrics.impl;
 
 import nl.vu.qa_for_lod.Graph;
-import nl.vu.qa_for_lod.data.Results;
+import nl.vu.qa_for_lod.metrics.Distribution;
+import nl.vu.qa_for_lod.metrics.Metric;
+import nl.vu.qa_for_lod.metrics.Results;
 
 /**
  * Metric measuring the popularity of the nodes. Assuming the presence of highly
@@ -16,15 +18,16 @@ import nl.vu.qa_for_lod.data.Results;
  * @author Christophe Guéret <christophe.gueret@gmail.com>
  */
 // http://stackoverflow.com/questions/153724/how-to-round-a-number-to-n-decimal-places-in-java
-public class Popularity extends Metric {
+public class Popularity implements Metric {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see nl.vu.qa_for_lod.metrics.Metric#go(nl.vu.qa_for_lod.data.Results)
+	 * @see
+	 * nl.vu.qa_for_lod.metrics.Metric#getDistanceToIdealDistribution(nl.vu.
+	 * qa_for_lod.data.Distribution)
 	 */
-	@Override
-	protected void go(Graph graph, Results results, MetricState state) {
-		graph.getNodesPopularity(results);
+	public double getDistanceToIdealDistribution(Distribution distribution) {
+		return 0;
 	}
 
 	/*
@@ -32,9 +35,17 @@ public class Popularity extends Metric {
 	 * 
 	 * @see nl.vu.qa_for_lod.metrics.Metric#getName()
 	 */
-	@Override
 	public String getName() {
 		return "popularity";
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see nl.vu.qa_for_lod.metrics.Metric#getResults(nl.vu.qa_for_lod.Graph)
+	 */
+	public Results getResults(Graph graph) {
+		return graph.getNodesPopularity();
 	}
 
 }
