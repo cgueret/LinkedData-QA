@@ -5,10 +5,11 @@ package nl.vu.qa_for_lod.metrics.impl;
 
 import java.util.Map.Entry;
 
+import com.hp.hpl.jena.rdf.model.Resource;
+
 import nl.vu.qa_for_lod.Graph;
 import nl.vu.qa_for_lod.metrics.Distribution;
 import nl.vu.qa_for_lod.metrics.Metric;
-import nl.vu.qa_for_lod.metrics.Results;
 
 /**
  * Metric computing the centrality of the nodes in the network. The global goal
@@ -30,10 +31,12 @@ public class Centrality implements Metric {
 	public double getDistanceToIdealDistribution(Distribution distribution) {
 		// Compute the centrality index as the distance to the ideal
 		double c = 0;
+		
 		Double max = distribution.max(Distribution.Axis.Y);
 		for (Entry<Double, Double> centrality : distribution.entrySet())
 			c += max - centrality.getValue();
-		c = c / (distribution.size() - 1);
+		if (distribution.size() > 1)
+			c = c / (distribution.size() - 1);
 
 		return c;
 	}
@@ -47,13 +50,11 @@ public class Centrality implements Metric {
 		return "Centrality";
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see nl.vu.qa_for_lod.metrics.Metric#getResults()
+	/* (non-Javadoc)
+	 * @see nl.vu.qa_for_lod.metrics.Metric#getResult(nl.vu.qa_for_lod.Graph, com.hp.hpl.jena.rdf.model.Resource)
 	 */
-	public Results getResults(Graph graph) {
-		return graph.getNodesCentrality();
+	public double getResult(Graph graph, Resource resource) {
+		return graph.getCentrality(resource);
 	}
 
 }

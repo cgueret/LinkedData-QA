@@ -130,7 +130,13 @@ public class DataFetcher {
 				StmtIterator iter = m.listStatements();
 				while (iter.hasNext()) {
 					Statement stmt = iter.nextStatement();
+					// Outgoing link
 					if (stmt.getSubject().equals(resource) && stmt.getObject() instanceof Resource) {
+						statements.add(stmt);
+						model.add(stmt);
+					}
+					// Incoming link
+					if (stmt.getObject().equals(resource) && stmt.getSubject() instanceof Resource) {
 						statements.add(stmt);
 						model.add(stmt);
 					}

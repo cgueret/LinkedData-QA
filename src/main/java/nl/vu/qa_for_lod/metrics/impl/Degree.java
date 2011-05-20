@@ -3,12 +3,14 @@
  */
 package nl.vu.qa_for_lod.metrics.impl;
 
+import java.util.Collection;
 import java.util.Map.Entry;
+
+import com.hp.hpl.jena.rdf.model.Resource;
 
 import nl.vu.qa_for_lod.Graph;
 import nl.vu.qa_for_lod.metrics.Distribution;
 import nl.vu.qa_for_lod.metrics.Metric;
-import nl.vu.qa_for_lod.metrics.Results;
 import nl.vu.qa_for_lod.misc.PolynomialFitter;
 import nl.vu.qa_for_lod.misc.PolynomialFitter.Polynomial;
 
@@ -41,8 +43,8 @@ public class Degree implements Metric {
 		double d = 0;
 		for (Entry<Double, Double> point : distribution.entrySet())
 			if (point.getKey() != 0 && point.getValue() != 0)
-				d += Math.abs(p.getY(Math.log(point.getKey()))- Math.log(point.getValue()));
-		
+				d += Math.abs(p.getY(Math.log(point.getKey())) - Math.log(point.getValue()));
+
 		return d;
 	}
 
@@ -58,10 +60,22 @@ public class Degree implements Metric {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see nl.vu.qa_for_lod.metrics.Metric#getResults(nl.vu.qa_for_lod.Graph)
+	 * @see nl.vu.qa_for_lod.metrics.Metric#getResult(nl.vu.qa_for_lod.Graph,
+	 * com.hp.hpl.jena.rdf.model.Resource)
 	 */
-	public Results getResults(Graph graph) {
-		return graph.getNodesDegree();
+	public double getResult(Graph graph, Resource resource) {
+		return graph.getDegree(resource);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * nl.vu.qa_for_lod.metrics.Metric#isApplicableFor(nl.vu.qa_for_lod.Graph,
+	 * java.util.Collection)
+	 */
+	public boolean isApplicableFor(Graph graph, Collection<Resource> resources) {
+		return true;
 	}
 
 }

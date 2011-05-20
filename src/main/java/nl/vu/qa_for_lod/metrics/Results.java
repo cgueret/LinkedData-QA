@@ -5,11 +5,13 @@ package nl.vu.qa_for_lod.metrics;
 
 import java.util.HashMap;
 
+import com.hp.hpl.jena.rdf.model.Resource;
+
 /**
  * @author Christophe Guéret <christophe.gueret@gmail.com>
  * 
  */
-public class Results extends HashMap<String, Double> {
+public class Results extends HashMap<Resource, Double> {
 
 	/**
 	 * 

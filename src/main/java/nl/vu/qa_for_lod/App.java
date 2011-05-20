@@ -1,41 +1,37 @@
 package nl.vu.qa_for_lod;
 
-import nl.vu.qa_for_lod.metrics.impl.Centrality;
 import nl.vu.qa_for_lod.metrics.impl.Degree;
-import nl.vu.qa_for_lod.metrics.impl.Popularity;
-import nl.vu.qa_for_lod.report.MetricsContainer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.hp.hpl.jena.rdf.model.Resource;
+
+/**
+ * @author Christophe Guéret <christophe.gueret@gmail.com>
+ * 
+ */
+// TODO add a metric to detect when most mappings are 1-1 and some 1-M (then
+// they are suspicious)
 public class App {
 	static Logger logger = LoggerFactory.getLogger(App.class);
 
 	public static void main(String[] args) throws Exception {
-		// Create a graph and a loader
-		Graph graph = new Graph();
-
-		// Load the seed file
-		SeedFile seedFile = new SeedFile("data/links-cut.nt");
-		logger.info("Number of seeds = " + seedFile.getSeedResources().size());
-
-		// Load the graph around the seed Resources
-		graph.loadGraphFromSeeds(seedFile.getSeedResources());
-		logger.info("Graph => " + graph.getStats());
-
-		// Dump the graph into external files
-		// graph.dump("/tmp/graph");
+		// Load the graph file
+		ExtraLinks extraLinks = new ExtraLinks("data/links-cut.nt");
+		logger.info("Number of resources  = " + extraLinks.getResources().size());
+		logger.info("Number of statements = " + extraLinks.getStatements().size());
 
 		// Run the analysis
-		MetricsContainer metrics = new MetricsContainer(graph, seedFile);
-		metrics.addMetric(new Popularity());
+		MetricsExecutor metrics = new MetricsExecutor(extraLinks);
 		metrics.addMetric(new Degree());
-		metrics.addMetric(new Centrality());
-		// TODO add a metric to detect when most mappings are 1-1 and some 1-M
-		// (then they are suspicious)
+
+		// Set the list of nodes to check
+		for (Resource resource : extraLinks.getResources())
+			metrics.addToResourcesQueue(resource);
 
 		// Run all the metrics
-		metrics.process();
+		metrics.processQueue();
 
 		// Print the execution report
 		metrics.printReport();

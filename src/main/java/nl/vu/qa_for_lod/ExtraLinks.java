@@ -1,7 +1,10 @@
 package nl.vu.qa_for_lod;
 
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.hp.hpl.jena.rdf.model.Model;
@@ -13,26 +16,24 @@ import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.util.FileManager;
 
 /**
+ * Wrapper used to load a graph into a set of statements
  * 
- */
-
-/**
  * @author Christophe Guéret <christophe.gueret@gmail.com>
  * 
  */
-public class SeedFile {
+public class ExtraLinks {
 	private final Set<Statement> statements = new HashSet<Statement>();
 
 	/**
 	 * @param string
 	 * @throws Exception
 	 */
-	public SeedFile(String seedFileName) throws Exception {
+	public ExtraLinks(String fileName) throws Exception {
 		// Read the seed rdf
 		Model model = ModelFactory.createDefaultModel();
 		RDFReader reader = model.getReader("N3");
 		reader.setProperty("WARN_REDEFINITION_OF_ID", "EM_IGNORE"); // speed
-		InputStream in = FileManager.get().open(seedFileName);
+		InputStream in = FileManager.get().open(fileName);
 		if (in == null) {
 			throw new Exception();
 		}
@@ -40,7 +41,7 @@ public class SeedFile {
 
 		// Iterate through the content of the seed and create the graph
 		StmtIterator iter = model.listStatements();
-		int max = 2500000;
+		int max = 6000;
 		while (iter.hasNext() && max-- != 0) {
 			Statement stmt = iter.nextStatement();
 			if (!(stmt.getObject() instanceof Resource))
@@ -54,7 +55,7 @@ public class SeedFile {
 	/**
 	 * @return
 	 */
-	public Set<Resource> getSeedResources() {
+	public Set<Resource> getResources() {
 		Set<Resource> resources = new HashSet<Resource>();
 		for (Statement statement : statements) {
 			resources.add(statement.getSubject());
@@ -66,8 +67,18 @@ public class SeedFile {
 	/**
 	 * @return
 	 */
-	public Set<Statement> getStatements() {
+	public Collection<Statement> getStatements() {
 		return statements;
 	}
 
+	/**
+	 * @return
+	 */
+	public Collection<Statement> getStatements(Resource resource) {
+		List<Statement> filteredStatements = new ArrayList<Statement>();
+		for (Statement statement : statements)
+			if (statement.getSubject().equals(resource) || statement.getObject().asResource().equals(resource))
+				filteredStatements.add(statement);
+		return filteredStatements;
+	}
 }

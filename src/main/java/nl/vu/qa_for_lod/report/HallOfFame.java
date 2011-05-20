@@ -9,12 +9,14 @@ import java.util.Map;
 import java.util.TreeSet;
 import java.util.Map.Entry;
 
+import com.hp.hpl.jena.rdf.model.Resource;
+
 /**
  * @author Christophe Guéret <christophe.gueret@gmail.com>
  * 
  */
 public class HallOfFame {
-	private final Map<String, Double> scores = new HashMap<String, Double>();
+	private final Map<Resource, Double> scores = new HashMap<Resource, Double>();
 	private final int size;
 
 	/**
@@ -34,9 +36,9 @@ public class HallOfFame {
 	/**
 	 * @param suspiciousNodes
 	 */
-	public void insert(List<String> suspiciousNodes) {
+	public void insert(List<Resource> suspiciousNodes) {
 		for (int index = 0; index < suspiciousNodes.size(); index++) {
-			String key = suspiciousNodes.get(index);
+			Resource key = suspiciousNodes.get(index);
 			if (!scores.containsKey(key))
 				scores.put(key, new Double(0));
 			scores.put(key, scores.get(key) + size - index);
@@ -49,9 +51,9 @@ public class HallOfFame {
 	public void print() {
 		TreeSet<Double> keys = new TreeSet<Double>();
 		keys.addAll(scores.values());
-		
+
 		for (Double key : keys.descendingSet())
-			for (Entry<String, Double> entry : scores.entrySet())
+			for (Entry<Resource, Double> entry : scores.entrySet())
 				if (entry.getValue().equals(key))
 					System.out.println(entry.getValue() + " " + entry.getKey());
 	}

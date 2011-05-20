@@ -1,4 +1,5 @@
 package nl.vu.qa_for_lod.misc;
+
 /***************************************************************************
  *   Copyright (C) 2009 by Paul Lutus, Ian Clarke                          *
  *   lutusp@arachnoid.com, ian.clarke@gmail.com                            *
@@ -32,34 +33,57 @@ import java.util.List;
  */
 
 /*
- * Changelog:
- * 20100130: Add note about relicensing
- * 20091114: Modify so that points can be added after the curve is
- *           created, also some other minor fixes 
- * 20091113: Extensively modified by Ian Clarke, main changes:
- *     - Should now be able to handle extremely large datasets
- *     - Use generic Java collections classes and interfaces 
- *       where possible
- *     - Data can be fed to the fitter as it is available, rather
- *       than all at once
+ * Changelog: 20100130: Add note about relicensing 20091114: Modify so that
+ * points can be added after the curve is created, also some other minor fixes
+ * 20091113: Extensively modified by Ian Clarke, main changes: - Should now be
+ * able to handle extremely large datasets - Use generic Java collections
+ * classes and interfaces where possible - Data can be fed to the fitter as it
+ * is available, rather than all at once
  * 
- * The code that this is based on was obtained from: http://arachnoid.com/polysolve
+ * The code that this is based on was obtained from:
+ * http://arachnoid.com/polysolve
  * 
- * Note: I (Ian Clarke) am happy to release this code under a more liberal 
- * license such as the LGPL, however Paul Lutus (the primary author) refuses
- * to do this on the grounds that the LGPL is not an open source license.  
- * If you want to try to explain to him that the LGPL is indeed an open 
- * source license, good luck - its like talking to a brick wall.
+ * Note: I (Ian Clarke) am happy to release this code under a more liberal
+ * license such as the LGPL, however Paul Lutus (the primary author) refuses to
+ * do this on the grounds that the LGPL is not an open source license. If you
+ * want to try to explain to him that the LGPL is indeed an open source license,
+ * good luck - its like talking to a brick wall.
  */
 public class PolynomialFitter {
 
-	private final int p, rs;
+	public static class Polynomial extends ArrayList<Double> {
+		private static final long serialVersionUID = 1692843494322684190L;
 
-	private long n = 0;
+		public Polynomial(final int p) {
+			super(p);
+		}
+
+		public double getY(final double x) {
+			double ret = 0;
+			for (int p = 0; p < size(); p++) {
+				ret += get(p) * (Math.pow(x, p));
+			}
+			return ret;
+		}
+
+		@Override
+		public String toString() {
+			final StringBuilder ret = new StringBuilder();
+			for (int x = size() - 1; x > -1; x--) {
+				ret.append(get(x) + (x > 0 ? "x^" + x + " + " : ""));
+			}
+			return ret.toString();
+		}
+	}
 
 	private final double[][] m;
 
 	private final double[] mpc;
+
+	private long n = 0;
+
+	private final int p, rs;
+
 	/**
 	 * @param degree
 	 *            The degree of the polynomial to be fit to the data
@@ -95,6 +119,16 @@ public class PolynomialFitter {
 		}
 	}
 
+	protected double fx(final double x, final List<Double> terms) {
+		double a = 0;
+		int e = 0;
+		for (final double i : terms) {
+			a += i * Math.pow(x, e);
+			e++;
+		}
+		return a;
+	}
+
 	/**
 	 * Returns a polynomial that seeks to minimize the square of the total
 	 * distance between the set of points and the polynomial.
@@ -122,15 +156,7 @@ public class PolynomialFitter {
 		}
 		return result;
 	}
-	private double fx(final double x, final List<Double> terms) {
-		double a = 0;
-		int e = 0;
-		for (final double i : terms) {
-			a += i * Math.pow(x, e);
-			e++;
-		}
-		return a;
-	}
+
 	private void gj_divide(final double[][] A, final int i, final int j, final int m) {
 		for (int q = j + 1; q < m; q++) {
 			A[i][q] /= A[i][j];
@@ -185,31 +211,5 @@ public class PolynomialFitter {
 		temp = A[i];
 		A[i] = A[j];
 		A[j] = temp;
-	}
-
-
-	public static class Polynomial extends ArrayList<Double> {
-		private static final long serialVersionUID = 1692843494322684190L;
-
-		public Polynomial(final int p) {
-			super(p);
-		}
-
-		public double getY(final double x) {
-			double ret = 0;
-			for (int p=0; p<size(); p++) {
-				ret += get(p)*(Math.pow(x, p));
-			}
-			return ret;
-		}
-
-		@Override
-		public String toString() {
-			final StringBuilder ret = new StringBuilder();
-			for (int x = size() - 1; x > -1; x--) {
-				ret.append(get(x) + (x > 0 ? "x^" + x + " + " : ""));
-			}
-			return ret.toString();
-		}
 	}
 }

@@ -6,13 +6,10 @@ package nl.vu.qa_for_lod;
 import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
-
-import nl.vu.qa_for_lod.metrics.Distribution;
-import nl.vu.qa_for_lod.metrics.Results;
 
 import org.gephi.data.attributes.api.AttributeController;
 import org.gephi.data.attributes.api.AttributeModel;
@@ -27,7 +24,6 @@ import org.gephi.preview.api.EdgeColorizer;
 import org.gephi.preview.api.PreviewController;
 import org.gephi.preview.api.PreviewModel;
 import org.gephi.project.api.ProjectController;
-import org.gephi.statistics.plugin.DegreeDistribution;
 import org.gephi.statistics.plugin.GraphDistance;
 import org.gephi.statistics.plugin.PageRank;
 import org.openide.util.Lookup;
@@ -36,15 +32,18 @@ import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.Statement;
+import com.hp.hpl.jena.shared.NotFoundException;
 
 /**
  * @author Christophe Guéret <christophe.gueret@gmail.com>
  * 
  */
 // http://gephi.org/docs/toolkit/org/gephi/statistics/spi/Statistics.html
+// http://wiki.gephi.org/index.php/Toolkit_-_Statistics_and_Metrics
 public class Graph {
 	private DirectedGraph directedGraph;
 	private GraphModel graphModel;
+	private final Map<Node, Resource> nodeToResource = new HashMap<Node, Resource>();
 
 	/**
 	 * Init Gephi and create a graph
@@ -64,6 +63,7 @@ public class Graph {
 		Node node = graphModel.factory().newNode(resource.getURI());
 		node.getNodeData().setLabel(resource.getURI());
 		directedGraph.addNode(node);
+		nodeToResource.put(node, resource);
 		return node;
 	}
 
@@ -97,6 +97,13 @@ public class Graph {
 	public void addStatements(Collection<Statement> statements) {
 		for (Statement statement : statements)
 			this.addStatement(statement);
+	}
+
+	/**
+	 * 
+	 */
+	public void clear() {
+		directedGraph.clear();
 	}
 
 	/**
@@ -139,94 +146,57 @@ public class Graph {
 	}
 
 	/**
+	 * @param resource
 	 * @return
 	 */
-	public double getDegreeDistributionPowerLawFactor() {
+	public double getCentrality(Resource resource) {
 		// Get graph model and attribute model of current workspace
 		GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
 		AttributeModel attributeModel = Lookup.getDefault().lookup(AttributeController.class).getModel();
 
-		// Get PageRank
-		DegreeDistribution degreeDistribution = new DegreeDistribution();
-		degreeDistribution.setDirected(false);
-		degreeDistribution.execute(graphModel, attributeModel);
-
-		// Place the results in the results class
-		return degreeDistribution.getCombinedPowerLaw();
-	}
-
-	/**
-	 * @return
-	 */
-	public Set<Node> getNodes() {
-		Set<Node> nodes = new HashSet<Node>();
-		for (Node node : graphModel.getGraph().getNodes())
-			nodes.add(node);
-		return nodes;
-	}
-
-	/**
-	 * Compute the centrality of all the nodes in the network
-	 * 
-	 * @return A list of nodes name with their centrality value
-	 */
-	// http://wiki.gephi.org/index.php/Toolkit_-_Statistics_and_Metrics
-	public Results getNodesCentrality() {
-		Results results = new Results();
-
-		// Get graph model and attribute model of current workspace
-		GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
-		AttributeModel attributeModel = Lookup.getDefault().lookup(AttributeController.class).getModel();
-
-		// Get Centrality
+		// Compute centralities
 		GraphDistance distance = new GraphDistance();
 		distance.setDirected(true);
 		distance.setRelative(false);
 		distance.execute(graphModel, attributeModel);
 
-		// Iterate over values
+		// Get the result for the requested resource
 		int col = attributeModel.getNodeTable().getColumn(GraphDistance.BETWEENNESS).getIndex();
-		for (Node n : directedGraph.getNodes()) {
-			Double centrality = (Double) n.getNodeData().getAttributes().getValue(col);
-			results.put(n.getNodeData().getLabel(), centrality);
-		}
+		Node n = directedGraph.getNode(resource.toString());
+		Double centrality = (Double) n.getNodeData().getAttributes().getValue(col);
 
-		return results;
+		return centrality.doubleValue();
 	}
 
 	/**
+	 * @param resource
 	 * @return
 	 */
-	public Results getNodesDegree() {
-		Results results = new Results();
-		for (Node node : directedGraph.getNodes())
-			results.put(node.getNodeData().getLabel(), Double.valueOf(directedGraph.getDegree(node)));
-		return results;
+	public double getDegree(Resource resource) {
+		Node n = directedGraph.getNode(resource.toString());
+		return directedGraph.getDegree(n);
 	}
 
 	/**
+	 * @param resource
 	 * @return
 	 */
-	public Results getNodesPopularity() {
-		Results results = new Results();
-
+	public double getPopularity(Resource resource) {
 		// Get graph model and attribute model of current workspace
 		GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
 		AttributeModel attributeModel = Lookup.getDefault().lookup(AttributeController.class).getModel();
 
-		// Get PageRank
+		// Compute PageRank
 		PageRank pageRank = new PageRank();
 		pageRank.setUndirected(false);
 		pageRank.execute(graphModel, attributeModel);
 
-		// Place the results in the results class
+		// Get the result for the requested resource
 		int col = attributeModel.getNodeTable().getColumn(PageRank.PAGERANK).getIndex();
-		for (Node n : directedGraph.getNodes()) {
-			Double centrality = (Double) n.getNodeData().getAttributes().getValue(col);
-			results.put(n.getNodeData().getLabel(), centrality);
-		}
+		Node n = directedGraph.getNode(resource.toString());
+		Double popularity = (Double) n.getNodeData().getAttributes().getValue(col);
 
-		return results;
+		return popularity.doubleValue();
 	}
 
 	/**
@@ -248,55 +218,46 @@ public class Graph {
 	}
 
 	/**
-	 * @param seedURIs
+	 * @param resource
 	 */
 	// TODO Parallelise this
-	public void loadGraphFromSeeds(Set<Resource> seedURIs) {
+	public void loadFromResource(Resource resource) throws NotFoundException {
 		// Get a data fetcher
 		DataFetcher fetcher = new DataFetcher();
 
-		// This list will be used for the second level
-		Set<Resource> neighbours = new HashSet<Resource>();
+		// Load the data around the resource
+		Collection<Statement> statements = fetcher.get(resource);
+		if (statements.size() == 0)
+			throw new NotFoundException("No information found for " + resource);
+		addStatements(statements);
 
-		// Load the data from the seeds
-		Distribution d = new Distribution();
-		for (Resource resource : seedURIs) {
-			double c = 0;
-			for (Statement stmt : fetcher.get(resource)) {
-				addStatement(stmt);
-				neighbours.add(stmt.getObject().asResource());
-				c = c + 1;
-			}
-			d.increaseCounter(c);
-		}
-		try {
-			d.writeToFile("/tmp/expension.dat");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		// Connect the neighbours among them
-		for (Resource resource : neighbours) {
-			for (Statement stmt : fetcher.get(resource)) {
-				if (containsResource(stmt.getObject().asResource())) {
+		// Connect the neighbours among them if possible
+		Node n = directedGraph.getNode(resource.getURI());
+		Edge[] edges = directedGraph.getEdges(n).toArray();
+		for (Edge edge : edges) {
+			Node neighbour = (edge.getSource().equals(n) ? edge.getTarget() : edge.getSource());
+			for (Statement stmt : fetcher.get(nodeToResource.get(neighbour)))
+				if (this.containsResource(stmt.getObject().asResource()))
 					addStatement(stmt);
-				}
-			}
 		}
-
-		// Clean the graph from the nodes which are dead ends
-		Collection<Node> nodes = new ArrayList<Node>();
-		do {
-			nodes.clear();
-			for (Node node : directedGraph.getNodes())
-				if (directedGraph.getInDegree(node) > 0)
-					if (directedGraph.getOutDegree(node) == 0)
-						nodes.add(node);
-			for (Node node : nodes)
-				directedGraph.removeNode(node);
-		} while (nodes.size() != 0);
 
 		// Close the data fetcher
 		fetcher.close();
 	}
+
+	/**
+	 * @param seedURIs
+	 */
+	public void loadFromResources(Set<Resource> resources) {
+		for (Resource resource : resources)
+			loadFromResource(resource);
+	}
 }
+
+// Clean the graph from the nodes which are dead ends
+/*
+ * Collection<Node> nodes = new ArrayList<Node>(); do { nodes.clear(); for (Node
+ * node : directedGraph.getNodes()) if (directedGraph.getInDegree(node) > 0) if
+ * (directedGraph.getOutDegree(node) == 0) nodes.add(node); for (Node node :
+ * nodes) directedGraph.removeNode(node); } while (nodes.size() != 0);
+ */

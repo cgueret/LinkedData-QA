@@ -7,11 +7,12 @@ import java.util.Map.Entry;
 
 import org.apache.commons.math.distribution.NormalDistributionImpl;
 
+import com.hp.hpl.jena.rdf.model.Resource;
+
 import nl.vu.qa_for_lod.Graph;
 import nl.vu.qa_for_lod.metrics.Distribution;
 import nl.vu.qa_for_lod.metrics.Distribution.Axis;
 import nl.vu.qa_for_lod.metrics.Metric;
-import nl.vu.qa_for_lod.metrics.Results;
 
 /**
  * Metric measuring the popularity of the nodes. Assuming the presence of highly
@@ -36,7 +37,7 @@ public class Popularity implements Metric {
 		distribution.normalize();
 
 		// Create the ideal distribution
-		double sd = distribution.standardDeviation(Axis.Y);
+		double sd = Math.max(distribution.standardDeviation(Axis.Y), 0.000001);
 		double mean = distribution.mean(Axis.Y);
 		NormalDistributionImpl t = new NormalDistributionImpl(mean, sd);
 
@@ -44,7 +45,7 @@ public class Popularity implements Metric {
 		double d = 0;
 		for (Entry<Double, Double> point : distribution.entrySet())
 			d += Math.abs(t.density(point.getKey().doubleValue()) - point.getValue());
-			
+
 		return d;
 
 	}
@@ -61,9 +62,10 @@ public class Popularity implements Metric {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see nl.vu.qa_for_lod.metrics.Metric#getResults(nl.vu.qa_for_lod.Graph)
+	 * @see nl.vu.qa_for_lod.metrics.Metric#getResult(nl.vu.qa_for_lod.Graph,
+	 * com.hp.hpl.jena.rdf.model.Resource)
 	 */
-	public Results getResults(Graph graph) {
-		return graph.getNodesPopularity();
+	public double getResult(Graph graph, Resource resource) {
+		return graph.getPopularity(resource);
 	}
 }

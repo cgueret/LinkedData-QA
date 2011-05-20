@@ -38,18 +38,16 @@ public class Distribution {
 	}
 
 	/**
-	 * Divide all the Y values by their sum to get probabilities
+	 * @param axis
+	 * @return
 	 */
-	public void normalize() {
-		// Count
-		Double total = 0.0;
-		for (Double v : data.values())
-			total += v;
-
-		// Rescale
-		if (total != 0)
-			for (Entry<Double, Double> entry : data.entrySet())
-				data.put(entry.getKey(), entry.getValue() / total);
+	private double[] getValues(Axis axis) {
+		Collection<Double> values = (axis.equals(Axis.X) ? data.keySet() : data.values());
+		double[] numbers = new double[values.size()];
+		int i = 0;
+		for (Double v : values)
+			numbers[i++] = v;
+		return numbers;
 	}
 
 	/**
@@ -75,24 +73,6 @@ public class Distribution {
 	 * @param axis
 	 * @return
 	 */
-	public Double min(Axis axis) {
-		TreeSet<Double> values = new TreeSet<Double>(axis.equals(Axis.X) ? data.keySet() : data.values());
-		return values.first();
-	}
-
-	/**
-	 * @param axis
-	 * @return
-	 */
-	public double standardDeviation(Axis axis) {
-		StandardDeviation sd = new StandardDeviation();
-		return sd.evaluate(getValues(axis));
-	}
-
-	/**
-	 * @param axis
-	 * @return
-	 */
 	public double mean(Axis axis) {
 		Mean mean = new Mean();
 		return mean.evaluate(getValues(axis));
@@ -102,13 +82,24 @@ public class Distribution {
 	 * @param axis
 	 * @return
 	 */
-	private double[] getValues(Axis axis) {
-		Collection<Double> values = (axis.equals(Axis.X) ? data.keySet() : data.values());
-		double[] numbers = new double[values.size()];
-		int i = 0;
-		for (Double v : values)
-			numbers[i++] = v;
-		return numbers;
+	public Double min(Axis axis) {
+		TreeSet<Double> values = new TreeSet<Double>(axis.equals(Axis.X) ? data.keySet() : data.values());
+		return values.first();
+	}
+
+	/**
+	 * Divide all the Y values by their sum to get probabilities
+	 */
+	public void normalize() {
+		// Count
+		Double total = 0.0;
+		for (Double v : data.values())
+			total += v;
+
+		// Rescale
+		if (total != 0)
+			for (Entry<Double, Double> entry : data.entrySet())
+				data.put(entry.getKey(), entry.getValue() / total);
 	}
 
 	/**
@@ -116,6 +107,15 @@ public class Distribution {
 	 */
 	public int size() {
 		return data.size();
+	}
+
+	/**
+	 * @param axis
+	 * @return
+	 */
+	public double standardDeviation(Axis axis) {
+		StandardDeviation sd = new StandardDeviation();
+		return sd.evaluate(getValues(axis));
 	}
 
 	/**

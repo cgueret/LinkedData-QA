@@ -11,6 +11,9 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.Map.Entry;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import nl.vu.qa_for_lod.report.MetricState;
 
 import com.hp.hpl.jena.rdf.model.Resource;
@@ -20,6 +23,8 @@ import com.hp.hpl.jena.rdf.model.Resource;
  * 
  */
 public class MetricData {
+	protected static final Logger logger = LoggerFactory.getLogger(MetricData.class);
+
 	/** Distance to ideal value */
 	private Map<MetricState, Double> distanceMap = new HashMap<MetricState, Double>();
 
@@ -44,11 +49,20 @@ public class MetricData {
 	public Distribution getDistribution(MetricState state) {
 		if (distributionMap.get(state) == null) {
 			Distribution distribution = new Distribution();
-			for (Entry<String, Double> r : resultsMap.get(state).entrySet())
+			for (Entry<Resource, Double> r : resultsMap.get(state).entrySet())
 				distribution.increaseCounter(r.getValue());
 			distributionMap.put(state, distribution);
 		}
 		return distributionMap.get(state);
+	}
+
+	/**
+	 * @return
+	 */
+	public double getRatioDistanceChange() {
+		if (distanceMap.get(MetricState.BEFORE) == 0)
+			return 0;
+		return 100 * (distanceMap.get(MetricState.AFTER) / distanceMap.get(MetricState.BEFORE));
 	}
 
 	/**
@@ -67,13 +81,13 @@ public class MetricData {
 	 * @return an ordered list of the top suspicious nodes according to the
 	 *         metric
 	 */
-	public List<String> getSuspiciousNodes(int number, Set<Resource> resources) {
+	public List<Resource> getSuspiciousNodes(int number, Set<Resource> resources) {
 		// Get the results
 		Results resultsBefore = getResults(MetricState.BEFORE);
 		Results resultsAfter = getResults(MetricState.AFTER);
 
 		// Get the list of nodes for which we have before and after results
-		Set<String> keys = new TreeSet<String>(resultsBefore.keySet());
+		Set<Resource> keys = new TreeSet<Resource>(resultsBefore.keySet());
 		keys.retainAll(resultsAfter.keySet());
 
 		// If we want to filter, get only the relevant keys
@@ -85,16 +99,16 @@ public class MetricData {
 		}
 
 		// Compare
-		Map<String, Double> diffs = new HashMap<String, Double>();
-		for (String key : keys)
+		Map<Resource, Double> diffs = new HashMap<Resource, Double>();
+		for (Resource key : keys)
 			diffs.put(key, Math.abs(resultsAfter.get(key) - resultsBefore.get(key)));
 
 		// Get the ordered list of nodes
-		List<String> output = new ArrayList<String>();
+		List<Resource> output = new ArrayList<Resource>();
 		Set<Double> scores = new TreeSet<Double>();
 		scores.addAll(diffs.values());
 		for (Double score : scores)
-			for (Entry<String, Double> entry : diffs.entrySet())
+			for (Entry<Resource, Double> entry : diffs.entrySet())
 				if (entry.getValue().equals(score))
 					output.add(entry.getKey());
 
@@ -110,15 +124,6 @@ public class MetricData {
 	}
 
 	/**
-	 * @return
-	 */
-	public double getRatioDistanceChange() {
-		if (distanceMap.get(MetricState.BEFORE) == 0)
-			return 0;
-		return 100 * (distanceMap.get(MetricState.AFTER) / distanceMap.get(MetricState.BEFORE));
-	}
-
-	/**
 	 * @param state
 	 * @param distanceToIdealDistribution
 	 */
@@ -129,8 +134,18 @@ public class MetricData {
 	/**
 	 * @param results
 	 */
-	public void setResults(MetricState state, Results results) {
-		resultsMap.put(state, results);
+	public void setResult(MetricState state, Resource node, Double value) {
+		// Get, and init if needed, the results table
+		Results results = resultsMap.get(state);
+		if (results == null) {
+			results = new Results();
+			resultsMap.put(state, results);
+		}
+
+		// Save the result
+		results.put(node, value);
+
+		// Invalidate the distributions and distances
 		distributionMap.put(state, null);
 		distanceMap.put(state, null);
 	}
