@@ -5,6 +5,7 @@ package nl.vu.qa_for_lod.metrics;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -87,16 +88,12 @@ public class MetricData {
 		Results resultsAfter = getResults(MetricState.AFTER);
 
 		// Get the list of nodes for which we have before and after results
-		Set<Resource> keys = new TreeSet<Resource>(resultsBefore.keySet());
+		Set<Resource> keys = new HashSet<Resource>(resultsBefore.keySet());
 		keys.retainAll(resultsAfter.keySet());
 
 		// If we want to filter, get only the relevant keys
-		if (resources != null) {
-			Set<String> tmp = new TreeSet<String>();
-			for (Resource r : resources)
-				tmp.add(r.toString());
-			keys.retainAll(tmp);
-		}
+		if (resources != null) 
+			keys.retainAll(resources);
 
 		// Compare
 		Map<Resource, Double> diffs = new HashMap<Resource, Double>();

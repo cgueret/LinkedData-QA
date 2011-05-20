@@ -41,7 +41,7 @@ public class ExtraLinks {
 
 		// Iterate through the content of the seed and create the graph
 		StmtIterator iter = model.listStatements();
-		int max = 6000;
+		int max = 1000;
 		while (iter.hasNext() && max-- != 0) {
 			Statement stmt = iter.nextStatement();
 			if (!(stmt.getObject() instanceof Resource))
