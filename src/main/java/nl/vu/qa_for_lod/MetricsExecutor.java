@@ -11,13 +11,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.TreeSet;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.googlecode.charts4j.AxisLabels;
+import com.googlecode.charts4j.AxisLabelsFactory;
+import com.googlecode.charts4j.AxisStyle;
+import com.googlecode.charts4j.AxisTextAlignment;
+import com.googlecode.charts4j.BarChart;
+import com.googlecode.charts4j.BarChartPlot;
+import com.googlecode.charts4j.Color;
+import com.googlecode.charts4j.Data;
+import com.googlecode.charts4j.GCharts;
+import com.googlecode.charts4j.Plots;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.shared.NotFoundException;
 
 import nl.vu.qa_for_lod.metrics.Distribution;
+import nl.vu.qa_for_lod.metrics.Distribution.Axis;
 import nl.vu.qa_for_lod.metrics.Metric;
 import nl.vu.qa_for_lod.metrics.MetricData;
 import nl.vu.qa_for_lod.report.HallOfFame;
@@ -128,10 +141,11 @@ public class MetricsExecutor {
 	}
 
 	/**
+	 * @throws Exception
 	 * 
 	 */
 	// TODO Parallelise this
-	public void processQueue() {
+	public void processQueue() throws Exception {
 		logger.info("Process resources queue");
 
 		// Clear all previous results
@@ -162,12 +176,35 @@ public class MetricsExecutor {
 		for (Metric metric : applicableMetrics()) {
 			MetricData data = metricsData.get(metric);
 			for (MetricState state : MetricState.values()) {
-				// Get the distribution
-				Distribution distribution = data.getDistribution(state);
+				// Get the distributions
+				Distribution observedDistribution = data.getDistribution(state);
+				Distribution idealDistribution = metric.getIdealDistribution(observedDistribution);
 
 				// Ask the metric the distance to the ideal value
-				double v = metric.getDistanceToIdealDistribution(distribution);
-				data.setDistanceToIdeal(state, v);
+				data.setDistanceToIdeal(state, observedDistribution.distanceTo(idealDistribution));
+
+				if (state.equals(MetricState.AFTER)) {
+					// Plot the distributions
+					// observedDistribution.normalize();
+					// idealDistribution.normalize();
+					Set<Double> keys = new TreeSet<Double>();
+					keys.addAll(observedDistribution.keySet());
+					keys.addAll(idealDistribution.keySet());
+					List<BarChartPlot> l = new ArrayList<BarChartPlot>();
+					for (Double key : keys) {
+						Data d = Data.newData(observedDistribution.get(key), idealDistribution.get(key));
+						BarChartPlot plot = Plots.newBarChartPlot(d, Color.BLUE, key.toString());
+						l.add(plot);
+					}
+					BarChart chart = GCharts.newBarChart(l);
+					AxisLabels count = AxisLabelsFactory.newNumericRangeAxisLabels(0,
+							Math.max(observedDistribution.max(Axis.Y), idealDistribution.max(Axis.Y)));
+					count.setAxisStyle(AxisStyle.newAxisStyle(Color.BLACK, 13, AxisTextAlignment.CENTER));
+					chart.addYAxisLabels(count);
+					chart.setSize(500, 200);
+					chart.setSpaceBetweenGroupsOfBars(30);
+					System.out.println(chart.toURLString());
+				}
 			}
 		}
 	}

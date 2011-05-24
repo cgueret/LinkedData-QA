@@ -1,5 +1,6 @@
 package nl.vu.qa_for_lod;
 
+import nl.vu.qa_for_lod.metrics.impl.ClusteringCoefficient;
 import nl.vu.qa_for_lod.metrics.impl.Degree;
 
 import org.slf4j.Logger;
@@ -25,6 +26,7 @@ public class App {
 		// Run the analysis
 		MetricsExecutor metrics = new MetricsExecutor(extraLinks);
 		metrics.addMetric(new Degree());
+		metrics.addMetric(new ClusteringCoefficient());
 
 		// Set the list of nodes to check
 		for (Resource resource : extraLinks.getResources())
@@ -34,6 +36,6 @@ public class App {
 		metrics.processQueue();
 
 		// Print the execution report
-		metrics.printReport();
+		//metrics.printReport();
 	}
 }

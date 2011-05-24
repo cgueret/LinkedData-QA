@@ -27,22 +27,9 @@ public class SameAsChains implements Metric {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * nl.vu.qa_for_lod.metrics.Metric#getDistanceToIdealDistribution(nl.vu.
-	 * qa_for_lod.metrics.Distribution)
-	 */
-	public double getDistanceToIdealDistribution(Distribution distribution) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
 	 * @see nl.vu.qa_for_lod.metrics.Metric#getName()
 	 */
 	public String getName() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -53,7 +40,6 @@ public class SameAsChains implements Metric {
 	 * com.hp.hpl.jena.rdf.model.Resource)
 	 */
 	public double getResult(Graph graph, Resource resource) {
-		// TODO Auto-generated method stub
 		return 0;
 	}
 
@@ -65,8 +51,18 @@ public class SameAsChains implements Metric {
 	 * java.util.Collection)
 	 */
 	public boolean isApplicableFor(Graph graph, Collection<Resource> resources) {
-		// TODO Auto-generated method stub
 		return false;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * nl.vu.qa_for_lod.metrics.Metric#getIdealDistribution(nl.vu.qa_for_lod
+	 * .metrics.Distribution)
+	 */
+	public Distribution getIdealDistribution(Distribution distribution) {
+		return null;
 	}
 
 }

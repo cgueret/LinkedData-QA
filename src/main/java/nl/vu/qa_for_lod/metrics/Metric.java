@@ -4,7 +4,6 @@
 package nl.vu.qa_for_lod.metrics;
 
 import java.util.Collection;
-
 import com.hp.hpl.jena.rdf.model.Resource;
 
 import nl.vu.qa_for_lod.Graph;
@@ -16,14 +15,14 @@ import nl.vu.qa_for_lod.Graph;
  */
 public interface Metric {
 	/**
-	 * Compute the distance between the given distribution and what would be an
-	 * ideal distribution
+	 * Generate the ideal distribution for the metric
 	 * 
-	 * @param distribution
-	 *            the distribution to compare the ideal distribution to
-	 * @return the distance. 0 means equality, lower is better
+	 * @param inputDistribution
+	 *            the observed distribution to take in account when creating the
+	 *            ideal distribution
+	 * @return
 	 */
-	public abstract double getDistanceToIdealDistribution(Distribution distribution);
+	public abstract Distribution getIdealDistribution(Distribution inputDistribution);
 
 	/**
 	 * Get the name of the metric

@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -24,7 +25,6 @@ import org.gephi.preview.api.EdgeColorizer;
 import org.gephi.preview.api.PreviewController;
 import org.gephi.preview.api.PreviewModel;
 import org.gephi.project.api.ProjectController;
-import org.gephi.statistics.plugin.GraphDistance;
 import org.gephi.statistics.plugin.PageRank;
 import org.openide.util.Lookup;
 
@@ -149,29 +149,6 @@ public class Graph {
 	 * @param resource
 	 * @return
 	 */
-	public double getCentrality(Resource resource) {
-		// Get graph model and attribute model of current workspace
-		GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
-		AttributeModel attributeModel = Lookup.getDefault().lookup(AttributeController.class).getModel();
-
-		// Compute centralities
-		GraphDistance distance = new GraphDistance();
-		distance.setDirected(true);
-		distance.setRelative(false);
-		distance.execute(graphModel, attributeModel);
-
-		// Get the result for the requested resource
-		int col = attributeModel.getNodeTable().getColumn(GraphDistance.BETWEENNESS).getIndex();
-		Node n = directedGraph.getNode(resource.toString());
-		Double centrality = (Double) n.getNodeData().getAttributes().getValue(col);
-
-		return centrality.doubleValue();
-	}
-
-	/**
-	 * @param resource
-	 * @return
-	 */
 	public double getDegree(Resource resource) {
 		Node n = directedGraph.getNode(resource.toString());
 		return directedGraph.getDegree(n);
@@ -251,6 +228,37 @@ public class Graph {
 	public void loadFromResources(Set<Resource> resources) {
 		for (Resource resource : resources)
 			loadFromResource(resource);
+	}
+
+	/**
+	 * @param resource
+	 * @return
+	 */
+	public Set<Resource> getNeighbours(Resource resource) {
+		Set<Resource> neighbours = new HashSet<Resource>();
+		Node n = directedGraph.getNode(resource.getURI());
+		for (Edge edge : directedGraph.getEdges(n)) {
+			Node neighbour = (edge.getSource().equals(n) ? edge.getTarget() : edge.getSource());
+			neighbours.add(nodeToResource.get(neighbour));
+		}
+		return neighbours;
+	}
+
+	/**
+	 * @param neighbourA
+	 * @param neighbourB
+	 * @return
+	 */
+	public boolean containsEdge(Resource fromResource, Resource toResource) {
+		Node nodeFrom = directedGraph.getNode(fromResource.getURI());
+		Node nodeTo = directedGraph.getNode(toResource.getURI());
+
+		boolean res = false;
+		for (Edge edge : directedGraph.getEdges(nodeFrom))
+			if (edge.getSource().equals(nodeFrom) && edge.getTarget().equals(nodeTo))
+				res = true;
+
+		return res;
 	}
 }
 

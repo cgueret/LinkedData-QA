@@ -27,30 +27,6 @@ public class Degree implements Metric {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * nl.vu.qa_for_lod.metrics.Metric#getDistanceToIdealDistribution(nl.vu.
-	 * qa_for_lod.data.Distribution)
-	 */
-	public double getDistanceToIdealDistribution(Distribution distribution) {
-		// Try to fix a linear equation in log/log
-		PolynomialFitter poly = new PolynomialFitter(1);
-		for (Entry<Double, Double> point : distribution.entrySet())
-			if (point.getKey() != 0 && point.getValue() != 0)
-				poly.addPoint(Math.log(point.getKey()), Math.log(point.getValue()));
-		Polynomial p = poly.getBestFit();
-
-		// Measure the distance to that line
-		double d = 0;
-		for (Entry<Double, Double> point : distribution.entrySet())
-			if (point.getKey() != 0 && point.getValue() != 0)
-				d += Math.abs(p.getY(Math.log(point.getKey())) - Math.log(point.getValue()));
-
-		return d;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
 	 * @see nl.vu.qa_for_lod.metrics.Metric#getName()
 	 */
 	public String getName() {
@@ -76,6 +52,30 @@ public class Degree implements Metric {
 	 */
 	public boolean isApplicableFor(Graph graph, Collection<Resource> resources) {
 		return true;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * nl.vu.qa_for_lod.metrics.Metric#getIdealDistribution(nl.vu.qa_for_lod
+	 * .metrics.Distribution)
+	 */
+	public Distribution getIdealDistribution(Distribution inputDistribution) {
+		// Try to fix a linear equation in log/log
+		PolynomialFitter poly = new PolynomialFitter(1);
+		for (Entry<Double, Double> point : inputDistribution.entrySet())
+			if (point.getKey() != 0 && point.getValue() != 0)
+				poly.addPoint(Math.log(point.getKey()), Math.log(point.getValue()));
+		Polynomial p = poly.getBestFit();
+
+		// Use that log/log equation to generate the non-log/log ideal
+		// distribution
+		Distribution output = new Distribution();
+		for (Double key : inputDistribution.keySet())
+			output.set(key, Math.exp(p.getY(Math.log(key))));
+
+		return output;
 	}
 
 }

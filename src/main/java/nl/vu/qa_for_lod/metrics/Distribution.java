@@ -9,6 +9,7 @@ import java.io.Writer;
 import java.text.DecimalFormat;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -38,6 +39,13 @@ public class Distribution {
 	}
 
 	/**
+	 * @return
+	 */
+	public Set<Double> keySet() {
+		return data.keySet();
+	}
+
+	/**
 	 * @param axis
 	 * @return
 	 */
@@ -48,16 +56,6 @@ public class Distribution {
 		for (Double v : values)
 			numbers[i++] = v;
 		return numbers;
-	}
-
-	/**
-	 * @param x
-	 * @param state
-	 */
-	public void increaseCounter(double x) {
-		Double key = Double.valueOf(df.format(x));
-		Double counter = (data.containsKey(key) ? data.get(key) + 1 : Double.valueOf(1));
-		data.put(key, counter);
 	}
 
 	/**
@@ -119,6 +117,29 @@ public class Distribution {
 	}
 
 	/**
+	 * Compute the distance between the two distributions
+	 * 
+	 * @param other
+	 *            the distribution to compare to
+	 * @return the distance. 0 means equality, lower is better
+	 * @throws Exception 
+	 */
+	// http://en.wikipedia.org/wiki/Fr%C3%A9chet_distance
+	// http://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence
+	public double distanceTo(Distribution other) {
+		Set<Double> keys = new HashSet<Double>();
+		keys.addAll(this.keySet());
+		keys.addAll(other.keySet());
+		
+		// Measure the distance to that line
+		double d = 0;
+		for (Double key : keys)
+			d += Math.abs(this.get(key) - other.get(key));
+
+		return d;
+	}
+
+	/**
 	 * Write the distribution to a file
 	 * 
 	 * @throws IOException
@@ -134,6 +155,33 @@ public class Distribution {
 			file.write(buffer.append("\n").toString());
 		}
 		file.close();
+	}
+
+	/**
+	 * @param key
+	 * @param i
+	 */
+	public void set(double x, double value) {
+		Double key = Double.valueOf(df.format(x));
+		data.put(key, value);
+	}
+
+	/**
+	 * @param x
+	 * @param state
+	 */
+	public void increaseCounter(double x) {
+		Double key = Double.valueOf(df.format(x));
+		Double counter = (data.containsKey(key) ? data.get(key) + 1 : Double.valueOf(1));
+		data.put(key, counter);
+	}
+
+	/**
+	 * @param key
+	 * @return
+	 */
+	public double get(Double key) {
+		return (data.containsKey(key) ? data.get(key) : 0);
 	}
 
 }
