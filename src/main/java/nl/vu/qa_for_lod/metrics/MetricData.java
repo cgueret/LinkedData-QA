@@ -67,33 +67,22 @@ public class MetricData {
 	}
 
 	/**
-	 * @return
-	 */
-	public Results getResults(MetricState state) {
-		return resultsMap.get(state);
-	}
-
-	/**
 	 * List the top suspicious nodes
 	 * 
-	 * @param number
+	 * @param maximumResults
 	 *            The number of nodes to return
 	 * @param resources
 	 * @return an ordered list of the top suspicious nodes according to the
 	 *         metric
 	 */
-	public List<Resource> getSuspiciousNodes(int number, Set<Resource> resources) {
+	public List<Resource> getSuspiciousNodes() {
 		// Get the results
-		Results resultsBefore = getResults(MetricState.BEFORE);
-		Results resultsAfter = getResults(MetricState.AFTER);
+		Results resultsBefore = resultsMap.get(MetricState.BEFORE);
+		Results resultsAfter = resultsMap.get(MetricState.AFTER);
 
 		// Get the list of nodes for which we have before and after results
 		Set<Resource> keys = new HashSet<Resource>(resultsBefore.keySet());
 		keys.retainAll(resultsAfter.keySet());
-
-		// If we want to filter, get only the relevant keys
-		if (resources != null) 
-			keys.retainAll(resources);
 
 		// Compare
 		Map<Resource, Double> diffs = new HashMap<Resource, Double>();
@@ -110,7 +99,7 @@ public class MetricData {
 					output.add(entry.getKey());
 
 		// Return the top "number"
-		return output.subList(output.size() - number, output.size());
+		return output;
 	}
 
 	/**
@@ -140,6 +129,8 @@ public class MetricData {
 		}
 
 		// Save the result
+		if (results.containsKey(node))
+			System.out.println(state + " " + node + " " + value + " " + results.size());
 		results.put(node, value);
 
 		// Invalidate the distributions and distances

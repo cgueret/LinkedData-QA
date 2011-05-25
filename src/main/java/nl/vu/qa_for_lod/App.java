@@ -2,6 +2,7 @@ package nl.vu.qa_for_lod;
 
 import nl.vu.qa_for_lod.metrics.impl.ClusteringCoefficient;
 import nl.vu.qa_for_lod.metrics.impl.Degree;
+import nl.vu.qa_for_lod.report.HTMLReport;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +36,9 @@ public class App {
 		// Run all the metrics
 		metrics.processQueue();
 
-		// Print the execution report
-		//metrics.printReport();
+		// Generate the analysis report
+		logger.info("Save execution report");
+		HTMLReport report = HTMLReport.createReport("links-cut.nt", metrics, extraLinks);
+		report.writeTo("/tmp/report.html");
 	}
 }

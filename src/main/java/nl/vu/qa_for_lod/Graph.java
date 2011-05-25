@@ -44,6 +44,7 @@ public class Graph {
 	private DirectedGraph directedGraph;
 	private GraphModel graphModel;
 	private final Map<Node, Resource> nodeToResource = new HashMap<Node, Resource>();
+	private final DataFetcher fetcher;
 
 	/**
 	 * Init Gephi and create a graph
@@ -53,6 +54,9 @@ public class Graph {
 		pc.newProject();
 		graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
 		directedGraph = graphModel.getDirectedGraph();
+
+		// Get a data fetcher
+		fetcher = new DataFetcher();
 	}
 
 	/**
@@ -199,8 +203,6 @@ public class Graph {
 	 */
 	// TODO Parallelise this
 	public void loadFromResource(Resource resource) throws NotFoundException {
-		// Get a data fetcher
-		DataFetcher fetcher = new DataFetcher();
 
 		// Load the data around the resource
 		Collection<Statement> statements = fetcher.get(resource);
@@ -217,9 +219,6 @@ public class Graph {
 				if (this.containsResource(stmt.getObject().asResource()))
 					addStatement(stmt);
 		}
-
-		// Close the data fetcher
-		fetcher.close();
 	}
 
 	/**
@@ -259,6 +258,14 @@ public class Graph {
 				res = true;
 
 		return res;
+	}
+	
+	/**
+	 * 
+	 */
+	public void close() {
+		// Close the data fetcher
+		fetcher.close();
 	}
 }
 

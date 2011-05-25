@@ -23,11 +23,11 @@ import org.apache.commons.math.stat.descriptive.moment.StandardDeviation;
  * 
  */
 public class Distribution {
-	public static enum Axis {
+	public static enum DistributionAxis {
 		X, Y
 	}
 
-	private final static DecimalFormat df = new DecimalFormat("######.######");
+	private final static DecimalFormat df = new DecimalFormat("######.###");
 
 	private final Map<Double, Double> data = new HashMap<Double, Double>();
 
@@ -49,8 +49,8 @@ public class Distribution {
 	 * @param axis
 	 * @return
 	 */
-	private double[] getValues(Axis axis) {
-		Collection<Double> values = (axis.equals(Axis.X) ? data.keySet() : data.values());
+	private double[] getValues(DistributionAxis axis) {
+		Collection<Double> values = (axis.equals(DistributionAxis.X) ? data.keySet() : data.values());
 		double[] numbers = new double[values.size()];
 		int i = 0;
 		for (Double v : values)
@@ -62,8 +62,8 @@ public class Distribution {
 	 * @param axis
 	 * @return
 	 */
-	public Double max(Axis axis) {
-		TreeSet<Double> values = new TreeSet<Double>(axis.equals(Axis.X) ? data.keySet() : data.values());
+	public Double max(DistributionAxis axis) {
+		TreeSet<Double> values = new TreeSet<Double>(axis.equals(DistributionAxis.X) ? data.keySet() : data.values());
 		return values.last();
 	}
 
@@ -71,7 +71,7 @@ public class Distribution {
 	 * @param axis
 	 * @return
 	 */
-	public double mean(Axis axis) {
+	public double mean(DistributionAxis axis) {
 		Mean mean = new Mean();
 		return mean.evaluate(getValues(axis));
 	}
@@ -80,8 +80,8 @@ public class Distribution {
 	 * @param axis
 	 * @return
 	 */
-	public Double min(Axis axis) {
-		TreeSet<Double> values = new TreeSet<Double>(axis.equals(Axis.X) ? data.keySet() : data.values());
+	public Double min(DistributionAxis axis) {
+		TreeSet<Double> values = new TreeSet<Double>(axis.equals(DistributionAxis.X) ? data.keySet() : data.values());
 		return values.first();
 	}
 
@@ -111,7 +111,7 @@ public class Distribution {
 	 * @param axis
 	 * @return
 	 */
-	public double standardDeviation(Axis axis) {
+	public double standardDeviation(DistributionAxis axis) {
 		StandardDeviation sd = new StandardDeviation();
 		return sd.evaluate(getValues(axis));
 	}

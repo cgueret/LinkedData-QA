@@ -74,10 +74,9 @@ public class ClusteringCoefficient implements Metric {
 		// of nodes for a clustering coefficient of 1
 		Distribution result = new Distribution();
 		double total = 0;
-		for (Double key : inputDistribution.keySet()) {
-			result.set(key, 0);
-			total += result.get(key);
-		}
+		for (Double key : inputDistribution.keySet()) 
+			total += inputDistribution.get(key);
+		
 		result.set(1, total);
 
 		return result;
