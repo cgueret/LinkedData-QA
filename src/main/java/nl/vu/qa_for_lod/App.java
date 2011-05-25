@@ -1,5 +1,7 @@
 package nl.vu.qa_for_lod;
 
+import java.io.File;
+
 import nl.vu.qa_for_lod.metrics.impl.ClusteringCoefficient;
 import nl.vu.qa_for_lod.metrics.impl.Degree;
 import nl.vu.qa_for_lod.report.HTMLReport;
@@ -18,9 +20,13 @@ import com.hp.hpl.jena.rdf.model.Resource;
 public class App {
 	static Logger logger = LoggerFactory.getLogger(App.class);
 
-	public static void main(String[] args) throws Exception {
+	private void process(String dataName) throws Exception {
+		File file = new File(dataName);
+		if (!file.exists())
+			throw new Exception("File not found");
+
 		// Load the graph file
-		ExtraLinks extraLinks = new ExtraLinks("data/links-cut.nt");
+		ExtraLinks extraLinks = new ExtraLinks(dataName);
 		logger.info("Number of resources  = " + extraLinks.getResources().size());
 		logger.info("Number of statements = " + extraLinks.getStatements().size());
 
@@ -38,7 +44,12 @@ public class App {
 
 		// Generate the analysis report
 		logger.info("Save execution report");
-		HTMLReport report = HTMLReport.createReport("links-cut.nt", metrics, extraLinks);
-		report.writeTo("/tmp/report.html");
+		HTMLReport report = HTMLReport.createReport(file.getName(), metrics, extraLinks);
+		report.writeTo("/tmp/" + file.getName().replace(".","_") + "_report.html");
+	}
+
+	public static void main(String[] args) throws Exception {
+		App app = new App();
+		app.process("data/links-beaches.nt");
 	}
 }
