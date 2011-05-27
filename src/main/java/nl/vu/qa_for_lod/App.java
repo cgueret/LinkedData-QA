@@ -38,8 +38,10 @@ public class App {
 		metrics.addMetric(new SameAsChains());
 
 		// Set the list of nodes to check
+		int max = 400;
 		for (Resource resource : extraTriples.getResources())
-			metrics.addToResourcesQueue(resource);
+			if (metrics.queueSize() < max)
+				metrics.addToResourcesQueue(resource);
 
 		// Run all the metrics
 		metrics.processQueue();
@@ -52,6 +54,6 @@ public class App {
 
 	public static void main(String[] args) throws Exception {
 		App app = new App();
-		app.process("data/links-beaches.nt");
+		app.process("data/links.nt");
 	}
 }

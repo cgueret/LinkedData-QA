@@ -18,4 +18,10 @@ public interface DataProvider {
 	 * @return
 	 */
 	public Set<Statement> get(Resource resource);
+	
+	/**
+	 * 
+	 */
+	public void close();
+	
 }

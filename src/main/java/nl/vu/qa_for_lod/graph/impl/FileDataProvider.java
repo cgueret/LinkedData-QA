@@ -83,4 +83,11 @@ public class FileDataProvider implements DataProvider {
 	public Set<Resource> getResources() {
 		return data.keySet();
 	}
+
+	/* (non-Javadoc)
+	 * @see nl.vu.qa_for_lod.graph.DataProvider#close()
+	 */
+	public void close() {
+		data.clear();
+	}
 }

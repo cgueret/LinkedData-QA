@@ -5,12 +5,16 @@ package nl.vu.qa_for_lod;
 
 import java.awt.Dimension;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.JFrame;
 import javax.swing.JProgressBar;
@@ -19,13 +23,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hp.hpl.jena.rdf.model.Resource;
-import com.hp.hpl.jena.rdf.model.Statement;
-import com.hp.hpl.jena.shared.NotFoundException;
-
 import nl.vu.qa_for_lod.graph.DataProvider;
-import nl.vu.qa_for_lod.graph.Graph;
-import nl.vu.qa_for_lod.graph.impl.RDFDataProvider;
-import nl.vu.qa_for_lod.graph.impl.JenaGraph;
+import nl.vu.qa_for_lod.graph.impl.Any23DataProvider;
 import nl.vu.qa_for_lod.metrics.Distribution;
 import nl.vu.qa_for_lod.metrics.Metric;
 import nl.vu.qa_for_lod.metrics.MetricData;
@@ -41,6 +40,7 @@ public class MetricsExecutor {
 	private final Map<Metric, MetricData> metricsData = new HashMap<Metric, MetricData>();
 	private final List<Resource> resourceQueue = new ArrayList<Resource>();
 	private final DataProvider extraTriples;
+	private JProgressBar bar;
 
 	/**
 	 * @param extraTriples
@@ -69,93 +69,42 @@ public class MetricsExecutor {
 	 */
 	// TODO Parallelise this
 	public void processQueue() throws Exception {
+		logger.info("Process " + resourceQueue.size() + " resources in queue");
+
+		// Create a data fetcher to de-reference resources
+		DataProvider dataFetcher = new Any23DataProvider();
+
 		JFrame frame = new JFrame("Progress");
 		frame.setResizable(false);
 		frame.setPreferredSize(new Dimension(500, 32));
 
-		JProgressBar bar = new JProgressBar(0, resourceQueue.size());
+		bar = new JProgressBar(0, resourceQueue.size());
 		bar.setStringPainted(true);
 		frame.getContentPane().add(bar);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.pack();
 		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
-
-		logger.info("Process " + resourceQueue.size() + " resources in queue");
-
-		// Create a new empty graph
-		Graph graph = new JenaGraph();
-
-		// Create a data fetcher to de-reference resources
-		RDFDataProvider dataFetcher = new RDFDataProvider();
-
-		// Set used to track the expansion of the graph
-		Set<Resource> dereferencedResources = new HashSet<Resource>();
-
-		// Get executable metrics
-		List<Metric> executableMetrics = new ArrayList<Metric>();
-		for (Metric metric : metricsData.keySet()) {
-			if (metric.isApplicableFor(graph, resourceQueue)) {
-				executableMetrics.add(metric);
-				metricsData.get(metric).clear();
-			}
-		}
-
-		int index = 0;
+		
+		// Do the processing
+		ExecutorService executor = Executors.newFixedThreadPool(8);
+		List<Future<?>> handles = new ArrayList<Future<?>>();
 		for (Resource resource : resourceQueue) {
-			bar.setValue(index);
-			bar.setString(resource.toString());
-			try {
-				// Clear the current graph and expansion tracker
-				graph.clear();
-				dereferencedResources.clear();
-
-				// Add the resource and expand it
-				for (Statement statement : dataFetcher.get(resource)) {
-					// Add the statement
-					graph.addStatement(statement);
-
-					// Expand the other end of the statement
-					Resource other = (statement.getSubject().equals(resource) ? statement.getObject().asResource()
-							: statement.getSubject());
-					if (!dereferencedResources.contains(other)) {
-						for (Statement otherStatement : dataFetcher.get(other))
-							graph.addStatement(otherStatement);
-						dereferencedResources.add(other);
-					}
-				}
-				dereferencedResources.add(resource);
-
-				// Execute the metrics
-				for (Metric metric : executableMetrics)
-					metricsData.get(metric).setResult(MetricState.BEFORE, resource, metric.getResult(graph, resource));
-
-				// Add the statements from the extraLinks file
-				for (Statement statement : extraTriples.get(resource)) {
-					// Add the statement
-					graph.addStatement(statement);
-
-					// Expand the other end of the statement
-					Resource other = (statement.getSubject().equals(resource) ? statement.getObject().asResource()
-							: statement.getSubject());
-					if (!dereferencedResources.contains(other)) {
-						for (Statement otherStatement : dataFetcher.get(other))
-							graph.addStatement(otherStatement);
-						dereferencedResources.add(other);
-					}
-				}
-
-				// Re-execute the metrics
-				for (Metric metric : executableMetrics)
-					metricsData.get(metric).setResult(MetricState.AFTER, resource, metric.getResult(graph, resource));
-			} catch (NotFoundException e) {
-				// Just skip resources that don't work
-			}
-			index++;
+			MetricsTask task = new MetricsTask(this, resource, dataFetcher, extraTriples);
+			handles.add(executor.submit(task));
 		}
+		for (Future<?> handle : handles)
+			handle.get();
 
+		// We won't fetch data anymore
+		dataFetcher.close();
+
+		// Finish the executor
+		executor.shutdown();
+		executor.awaitTermination(1, TimeUnit.SECONDS);
+		
 		// Do the post processing
-		for (Metric metric : executableMetrics) {
+		for (Metric metric : this.getMetrics()) {
 			MetricData data = metricsData.get(metric);
 			for (MetricState state : MetricState.values()) {
 				// Get the distributions
@@ -167,9 +116,15 @@ public class MetricsExecutor {
 			}
 		}
 
-		dataFetcher.close();
-
 		frame.setVisible(false);
+	}
+
+	public void incrementBar() {
+		synchronized (bar) {
+			int v = bar.getValue();
+			bar.setValue(v + 1);
+			bar.invalidate();
+		}
 	}
 
 	/**
@@ -177,5 +132,22 @@ public class MetricsExecutor {
 	 */
 	public Set<Entry<Metric, MetricData>> metricsData() {
 		return metricsData.entrySet();
+	}
+
+	/**
+	 * @return
+	 */
+	public Collection<Metric> getMetrics() {
+		return metricsData.keySet();
+	}
+
+	public int queueSize() {
+		return resourceQueue.size();
+	}
+	/**
+	 * @return
+	 */
+	public MetricData getMetricData(Metric metric) {
+		return metricsData.get(metric);
 	}
 }
