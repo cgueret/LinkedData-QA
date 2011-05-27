@@ -7,7 +7,7 @@ import java.util.Collection;
 
 import com.hp.hpl.jena.rdf.model.Resource;
 
-import nl.vu.qa_for_lod.Graph;
+import nl.vu.qa_for_lod.graph.Graph;
 import nl.vu.qa_for_lod.metrics.Distribution;
 import nl.vu.qa_for_lod.metrics.Metric;
 
@@ -56,8 +56,12 @@ public class SameAsAggregator implements Metric {
 		return false;
 	}
 
-	/* (non-Javadoc)
-	 * @see nl.vu.qa_for_lod.metrics.Metric#getIdealDistribution(nl.vu.qa_for_lod.metrics.Distribution)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * nl.vu.qa_for_lod.metrics.Metric#getIdealDistribution(nl.vu.qa_for_lod
+	 * .metrics.Distribution)
 	 */
 	public Distribution getIdealDistribution(Distribution distribution) {
 		// TODO Auto-generated method stub

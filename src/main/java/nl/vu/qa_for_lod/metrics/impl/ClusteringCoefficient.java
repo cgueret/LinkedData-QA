@@ -8,7 +8,7 @@ import java.util.Set;
 
 import com.hp.hpl.jena.rdf.model.Resource;
 
-import nl.vu.qa_for_lod.Graph;
+import nl.vu.qa_for_lod.graph.Graph;
 import nl.vu.qa_for_lod.metrics.Distribution;
 import nl.vu.qa_for_lod.metrics.Metric;
 
@@ -39,14 +39,17 @@ public class ClusteringCoefficient implements Metric {
 	 */
 	// http://en.wikipedia.org/wiki/Clustering_coefficient
 	public double getResult(Graph graph, Resource resource) {
-		Set<Resource> neighbours = graph.getNeighbours(resource);
+		// Get all the neighbours, independently of the binding relation
+		Set<Resource> neighbours = graph.getNeighbours(resource, null);
 
 		double c = 0;
-		for (Resource neighbourA : neighbours)
-			for (Resource neighbourB : neighbours)
-				if (!neighbourA.equals(neighbourB) && graph.containsEdge(neighbourA, neighbourB))
-					c++;
-		c = c / (neighbours.size() * (neighbours.size() - 1.0d));
+		if (neighbours.size() > 1) {
+			for (Resource neighbourA : neighbours)
+				for (Resource neighbourB : neighbours)
+					if (!neighbourA.equals(neighbourB) && graph.containsEdge(neighbourA, neighbourB, true))
+						c++;
+			c = c / (neighbours.size() * (neighbours.size() - 1.0d));
+		}
 
 		return c;
 	}
@@ -74,9 +77,9 @@ public class ClusteringCoefficient implements Metric {
 		// of nodes for a clustering coefficient of 1
 		Distribution result = new Distribution();
 		double total = 0;
-		for (Double key : inputDistribution.keySet()) 
+		for (Double key : inputDistribution.keySet())
 			total += inputDistribution.get(key);
-		
+
 		result.set(1, total);
 
 		return result;

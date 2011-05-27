@@ -6,7 +6,7 @@ package nl.vu.qa_for_lod.metrics;
 import java.util.Collection;
 import com.hp.hpl.jena.rdf.model.Resource;
 
-import nl.vu.qa_for_lod.Graph;
+import nl.vu.qa_for_lod.graph.Graph;
 
 /**
  * Generic metric to be inherited by every metric implemented in the framework

@@ -2,8 +2,10 @@ package nl.vu.qa_for_lod;
 
 import java.io.File;
 
+import nl.vu.qa_for_lod.graph.impl.FileDataProvider;
 import nl.vu.qa_for_lod.metrics.impl.ClusteringCoefficient;
 import nl.vu.qa_for_lod.metrics.impl.Degree;
+import nl.vu.qa_for_lod.metrics.impl.SameAsChains;
 import nl.vu.qa_for_lod.report.HTMLReport;
 
 import org.slf4j.Logger;
@@ -26,17 +28,17 @@ public class App {
 			throw new Exception("File not found");
 
 		// Load the graph file
-		ExtraLinks extraLinks = new ExtraLinks(dataName);
-		logger.info("Number of resources  = " + extraLinks.getResources().size());
-		logger.info("Number of statements = " + extraLinks.getStatements().size());
+		FileDataProvider extraTriples = new FileDataProvider(dataName);
+		logger.info("Number of resources  = " + extraTriples.getResources().size());
 
 		// Run the analysis
-		MetricsExecutor metrics = new MetricsExecutor(extraLinks);
+		MetricsExecutor metrics = new MetricsExecutor(extraTriples);
 		metrics.addMetric(new Degree());
 		metrics.addMetric(new ClusteringCoefficient());
+		metrics.addMetric(new SameAsChains());
 
 		// Set the list of nodes to check
-		for (Resource resource : extraLinks.getResources())
+		for (Resource resource : extraTriples.getResources())
 			metrics.addToResourcesQueue(resource);
 
 		// Run all the metrics
@@ -44,8 +46,8 @@ public class App {
 
 		// Generate the analysis report
 		logger.info("Save execution report");
-		HTMLReport report = HTMLReport.createReport(file.getName(), metrics, extraLinks);
-		report.writeTo("/tmp/" + file.getName().replace(".","_") + "_report.html");
+		HTMLReport report = HTMLReport.createReport(file.getName(), metrics, extraTriples);
+		report.writeTo("/tmp/" + file.getName().replace(".", "_") + "_report.html");
 	}
 
 	public static void main(String[] args) throws Exception {

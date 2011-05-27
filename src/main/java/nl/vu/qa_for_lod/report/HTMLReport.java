@@ -28,12 +28,13 @@ import com.googlecode.charts4j.GChart;
 import com.googlecode.charts4j.GCharts;
 import com.googlecode.charts4j.Line;
 import com.googlecode.charts4j.LineChart;
+import com.googlecode.charts4j.LineStyle;
 import com.googlecode.charts4j.Plots;
 import com.googlecode.charts4j.Shape;
 import com.hp.hpl.jena.rdf.model.Resource;
 
-import nl.vu.qa_for_lod.ExtraLinks;
 import nl.vu.qa_for_lod.MetricsExecutor;
+import nl.vu.qa_for_lod.graph.DataProvider;
 import nl.vu.qa_for_lod.metrics.Distribution;
 import nl.vu.qa_for_lod.metrics.Metric;
 import nl.vu.qa_for_lod.metrics.MetricData;
@@ -60,14 +61,14 @@ public class HTMLReport {
 		buffer.append("img {background-color: #FFFFFF;border: 1px solid #BBBBBB;padding: 20px 20px;}");
 		buffer.append("</style></head>");
 	}
-	
+
 	/**
 	 * @param datasetName
 	 * @param executor
 	 * @param extraLinks
 	 * @return
 	 */
-	public static HTMLReport createReport(String datasetName, MetricsExecutor executor, ExtraLinks extraLinks) {
+	public static HTMLReport createReport(String datasetName, MetricsExecutor executor, DataProvider extraLinks) {
 		HTMLReport report = new HTMLReport(datasetName);
 		report.appendMetricStatuses(executor);
 		report.appendHallOfFame(executor);
@@ -83,15 +84,18 @@ public class HTMLReport {
 		buffer.append("<h1>Metric distributions</h1>");
 		for (Entry<Metric, MetricData> entry : executor.metricsData()) {
 			// Get the distributions
-			Distribution observedDistribution = entry.getValue().getDistribution(MetricState.AFTER);
-			Distribution idealDistribution = entry.getKey().getIdealDistribution(observedDistribution);
+			Distribution observedDistributionBefore = entry.getValue().getDistribution(MetricState.BEFORE);
+			Distribution observedDistributionAfter = entry.getValue().getDistribution(MetricState.AFTER);
+			Distribution idealDistribution = entry.getKey().getIdealDistribution(observedDistributionAfter);
 
 			// Normalise the distributions
-			observedDistribution.normalize();
+			observedDistributionBefore.normalize();
+			observedDistributionAfter.normalize();
 			idealDistribution.normalize();
 
 			// Generate the chart
-			GChart chart = getChart(entry.getKey().getName(), observedDistribution, idealDistribution);
+			GChart chart = getChart(entry.getKey().getName(), observedDistributionBefore, observedDistributionAfter,
+					idealDistribution);
 			buffer.append("<img src=\"").append(chart.toURLForHTML()).append("\"/><br/>");
 		}
 	}
@@ -101,29 +105,36 @@ public class HTMLReport {
 	 * @param observed
 	 * @param ideal
 	 */
-	private GChart getChart(String name, Distribution observed, Distribution ideal) {
+	private GChart getChart(String name, Distribution observedBefore, Distribution observedAfter, Distribution ideal) {
 		// Get the list of keys
 		TreeSet<Double> keys = new TreeSet<Double>();
-		keys.addAll(observed.keySet());
+		keys.addAll(observedBefore.keySet());
+		keys.addAll(observedAfter.keySet());
 		keys.addAll(ideal.keySet());
 
 		// Get the list of values for every key
-		List<Double> observedData = new ArrayList<Double>();
+		List<Double> observedDataBefore = new ArrayList<Double>();
+		List<Double> observedDataAfter = new ArrayList<Double>();
 		List<Double> idealData = new ArrayList<Double>();
 		double d = 0;
 		for (Double key : keys) {
-			observedData.add(observed.get(key));
+			observedDataBefore.add(observedBefore.get(key));
+			observedDataAfter.add(observedAfter.get(key));
 			idealData.add(ideal.get(key));
 			d += ideal.get(key);
 		}
-		Line d1 = Plots.newLine(DataUtil.scale(observedData), Color.BLUE, "observed");
-		Line d2 = Plots.newLine(DataUtil.scale(idealData), Color.RED, "ideal");
-		d1.addShapeMarkers(Shape.CIRCLE, Color.BLUE, 6);
-		d2.addShapeMarkers(Shape.CIRCLE, Color.RED, 6);
+		Line d1 = Plots.newLine(DataUtil.scale(observedDataBefore), Color.BLUE, "observed before");
+		Line d2 = Plots.newLine(DataUtil.scale(observedDataAfter), Color.GREEN, "observed after");
+		Line d3 = Plots.newLine(DataUtil.scale(idealData), Color.RED, "ideal");
+		d3.setLineStyle(LineStyle.MEDIUM_DOTTED_LINE);
 
-		LineChart chart = GCharts.newLineChart(d1, d2);
+		d1.addShapeMarkers(Shape.CIRCLE, Color.BLUE, 6);
+		d2.addShapeMarkers(Shape.CIRCLE, Color.GREEN, 6);
+
+		LineChart chart = GCharts.newLineChart(d1, d2, d3);
 		AxisStyle axisStyle = AxisStyle.newAxisStyle(Color.BLACK, 13, AxisTextAlignment.CENTER);
-		AxisLabels count = AxisLabelsFactory.newNumericRangeAxisLabels(0, observed.max(DistributionAxis.Y));
+		AxisLabels count = AxisLabelsFactory.newNumericRangeAxisLabels(0,
+				Math.max(observedBefore.max(DistributionAxis.Y), observedAfter.max(DistributionAxis.Y)));
 		count.setAxisStyle(axisStyle);
 		chart.addYAxisLabels(count);
 		AxisLabels values = AxisLabelsFactory.newNumericRangeAxisLabels(keys.first(), keys.last());

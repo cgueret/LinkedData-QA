@@ -8,7 +8,7 @@ import java.util.Map.Entry;
 
 import com.hp.hpl.jena.rdf.model.Resource;
 
-import nl.vu.qa_for_lod.Graph;
+import nl.vu.qa_for_lod.graph.Graph;
 import nl.vu.qa_for_lod.metrics.Distribution;
 import nl.vu.qa_for_lod.metrics.Metric;
 import nl.vu.qa_for_lod.misc.PolynomialFitter;

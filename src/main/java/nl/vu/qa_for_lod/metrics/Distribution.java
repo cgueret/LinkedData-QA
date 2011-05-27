@@ -122,7 +122,7 @@ public class Distribution {
 	 * @param other
 	 *            the distribution to compare to
 	 * @return the distance. 0 means equality, lower is better
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	// http://en.wikipedia.org/wiki/Fr%C3%A9chet_distance
 	// http://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence
@@ -130,7 +130,7 @@ public class Distribution {
 		Set<Double> keys = new HashSet<Double>();
 		keys.addAll(this.keySet());
 		keys.addAll(other.keySet());
-		
+
 		// Measure the distance to that line
 		double d = 0;
 		for (Double key : keys)
