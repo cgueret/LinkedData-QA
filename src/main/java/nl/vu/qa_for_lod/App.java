@@ -38,7 +38,7 @@ public class App {
 		metrics.addMetric(new SameAsChains());
 
 		// Set the list of nodes to check
-		int max = 400;
+		int max = Integer.MAX_VALUE;
 		for (Resource resource : extraTriples.getResources())
 			if (metrics.queueSize() < max)
 				metrics.addToResourcesQueue(resource);

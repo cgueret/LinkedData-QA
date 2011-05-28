@@ -4,3 +4,4 @@
 .classpath
 /cache
 /tdb-cache
+/data-cache
