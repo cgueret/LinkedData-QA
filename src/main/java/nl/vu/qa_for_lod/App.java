@@ -150,5 +150,6 @@ public class App {
 			app.loadDefaultResourcesQueue();
 
 		app.process(reportFileName, withGUI);
+		System.exit(0);
 	}
 }
