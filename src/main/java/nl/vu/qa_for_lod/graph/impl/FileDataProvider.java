@@ -84,10 +84,22 @@ public class FileDataProvider implements DataProvider {
 		return data.keySet();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see nl.vu.qa_for_lod.graph.DataProvider#close()
 	 */
 	public void close() {
 		data.clear();
+	}
+
+	/**
+	 * @return
+	 */
+	public int size() {
+		Set<Statement> s = new HashSet<Statement>();
+		for (Set<Statement> stmt : data.values())
+			s.addAll(stmt);
+		return s.size();
 	}
 }

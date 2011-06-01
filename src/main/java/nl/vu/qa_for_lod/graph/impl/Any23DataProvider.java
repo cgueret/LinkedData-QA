@@ -4,6 +4,7 @@
 package nl.vu.qa_for_lod.graph.impl;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
@@ -22,6 +23,7 @@ import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
+import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.tdb.TDBFactory;
 
@@ -36,8 +38,9 @@ public class Any23DataProvider implements DataProvider {
 	private final static Any23 runner = new Any23();
 	private final Model model = TDBFactory.createModel("data-cache");
 	private final ReentrantLock lock = new ReentrantLock(false);
-	private final Resource THIS;
-	private final Property HAS_BLACK_LISTED;
+	private final Resource THIS = ResourceFactory.createResource("http://example.org/this");
+	private final Property HAS_BLACK_LISTED = ResourceFactory.createProperty("http://example.org/blacklisted");
+	private final Set<Resource> tempBlackList = new HashSet<Resource>();
 
 	protected class MyHandler implements TripleHandler {
 		private final Resource resource;
@@ -97,9 +100,7 @@ public class Any23DataProvider implements DataProvider {
 	 */
 	public Any23DataProvider() {
 		runner.setHTTPUserAgent("LATC QA tool prototype");
-		THIS = model.createResource("http://example.org/this");
-		HAS_BLACK_LISTED = model.createProperty("http://example.org/blacklisted");
-		//model.removeAll(THIS, HAS_BLACK_LISTED, (RDFNode)null);
+		// model.removeAll(THIS, HAS_BLACK_LISTED, (RDFNode)null);
 	}
 
 	/*
@@ -114,7 +115,7 @@ public class Any23DataProvider implements DataProvider {
 		Set<Statement> stmts = model.listStatements(resource, (Property) null, (RDFNode) null).toSet();
 		boolean blackListed = model.contains(THIS, HAS_BLACK_LISTED, resource);
 		lock.unlock();
-		if (stmts.size() == 0 && !blackListed) {
+		if (stmts.size() == 0 && !blackListed && !tempBlackList.contains(resource)) {
 			boolean failed = false;
 			try {
 				HTTPClient httpClient = runner.getHTTPClient();
@@ -124,11 +125,12 @@ public class Any23DataProvider implements DataProvider {
 			} catch (Exception e) {
 				logger.warn("Failed to load " + resource.getURI());
 				failed = true;
+				tempBlackList.add(resource);
 			}
 			lock.lock();
 			stmts = model.listStatements(resource, (Property) null, (RDFNode) null).toSet();
 			if (stmts.size() == 0 && !failed)
-				model.add(THIS, HAS_BLACK_LISTED, resource);
+				model.add(THIS, HAS_BLACK_LISTED, resource);				
 			lock.unlock();
 		}
 

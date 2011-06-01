@@ -27,12 +27,6 @@ public interface Graph {
 	 * @param resource
 	 * @return
 	 */
-	public boolean containsResource(Resource resource);
-
-	/**
-	 * @param resource
-	 * @return
-	 */
 	public int getDegree(Resource resource);
 
 	/**

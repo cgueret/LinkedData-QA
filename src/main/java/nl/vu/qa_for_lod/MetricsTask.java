@@ -92,7 +92,7 @@ public class MetricsTask implements Runnable {
 		} catch (NotFoundException e) {
 			// Just skip resources that don't work
 		} finally {
-			metricsExecutor.incrementBar();
+			//metricsExecutor.incrementBar();
 		}
 	}
 

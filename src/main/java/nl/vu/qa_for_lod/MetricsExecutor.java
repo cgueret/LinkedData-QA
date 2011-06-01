@@ -41,6 +41,7 @@ public class MetricsExecutor {
 	private final List<Resource> resourceQueue = new ArrayList<Resource>();
 	private final DataProvider extraTriples;
 	private JProgressBar bar;
+	private JFrame frame;
 
 	/**
 	 * @param extraTriples
@@ -50,10 +51,14 @@ public class MetricsExecutor {
 	}
 
 	/**
+	 * Adds a new metric to the analysis pipeline
+	 * 
 	 * @param metric
+	 *            the metric to be added
 	 */
 	public void addMetric(Metric metric) {
 		metricsData.put(metric, new MetricData());
+		logger.info("Registered new metric: " + metric.getName());
 	}
 
 	/**
@@ -67,43 +72,39 @@ public class MetricsExecutor {
 	 * @throws Exception
 	 * 
 	 */
-	// TODO Parallelise this
-	public void processQueue() throws Exception {
-		logger.info("Process " + resourceQueue.size() + " resources in queue");
+	public void processQueue(boolean withGUI) throws Exception {
+		logger.info("Start processing " + resourceQueue.size() + " resources");
 
 		// Create a data fetcher to de-reference resources
 		DataProvider dataFetcher = new Any23DataProvider();
 
-		JFrame frame = new JFrame("Progress");
-		frame.setResizable(false);
-		frame.setPreferredSize(new Dimension(500, 32));
+		if (withGUI) {
+			frame = new JFrame("Progress");
+			frame.setResizable(false);
+			frame.setPreferredSize(new Dimension(500, 32));
 
-		bar = new JProgressBar(0, resourceQueue.size());
-		bar.setStringPainted(true);
-		frame.getContentPane().add(bar);
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.pack();
-		frame.setLocationRelativeTo(null);
-		frame.setVisible(true);
-		
+			bar = new JProgressBar(0, resourceQueue.size());
+			bar.setStringPainted(true);
+			frame.getContentPane().add(bar);
+			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			frame.pack();
+			frame.setLocationRelativeTo(null);
+			frame.setVisible(true);
+		}
+
 		// Do the processing
-		ExecutorService executor = Executors.newFixedThreadPool(8);
-		List<Future<?>> handles = new ArrayList<Future<?>>();
+		// FIXME The parallel code was not more efficient :(
 		for (Resource resource : resourceQueue) {
 			MetricsTask task = new MetricsTask(this, resource, dataFetcher, extraTriples);
-			handles.add(executor.submit(task));
+			task.run();
+			if (withGUI) {
+				bar.setValue(bar.getValue() + 1);
+				bar.invalidate();
+			}
 		}
-		for (Future<?> handle : handles)
-			handle.get();
 
-		// We won't fetch data anymore
-		dataFetcher.close();
-
-		// Finish the executor
-		executor.shutdown();
-		executor.awaitTermination(1, TimeUnit.SECONDS);
-		
 		// Do the post processing
+		logger.info("Start post-processing");
 		for (Metric metric : this.getMetrics()) {
 			MetricData data = metricsData.get(metric);
 			for (MetricState state : MetricState.values()) {
@@ -116,16 +117,17 @@ public class MetricsExecutor {
 			}
 		}
 
-		frame.setVisible(false);
+		if (withGUI) {
+			frame.setVisible(false);
+		}
+
+		logger.info("Done!");
 	}
 
-	public void incrementBar() {
-		synchronized (bar) {
-			int v = bar.getValue();
-			bar.setValue(v + 1);
-			bar.invalidate();
-		}
-	}
+	/*
+	 * public void incrementBar() { synchronized (bar) { int v = bar.getValue();
+	 * bar.setValue(v + 1); bar.invalidate(); } }
+	 */
 
 	/**
 	 * @return
@@ -144,6 +146,7 @@ public class MetricsExecutor {
 	public int queueSize() {
 		return resourceQueue.size();
 	}
+
 	/**
 	 * @return
 	 */
@@ -151,3 +154,17 @@ public class MetricsExecutor {
 		return metricsData.get(metric);
 	}
 }
+
+/*
+ * // Do the processing ExecutorService executor =
+ * Executors.newFixedThreadPool(8); List<Future<?>> handles = new
+ * ArrayList<Future<?>>(); for (Resource resource : resourceQueue) { MetricsTask
+ * task = new MetricsTask(this, resource, dataFetcher, extraTriples);
+ * handles.add(executor.submit(task)); } for (Future<?> handle : handles)
+ * handle.get();
+ * 
+ * // We won't fetch data anymore dataFetcher.close();
+ * 
+ * // Finish the executor executor.shutdown(); executor.awaitTermination(1,
+ * TimeUnit.SECONDS);
+ */

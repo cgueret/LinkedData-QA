@@ -42,17 +42,6 @@ public class JenaGraph implements Graph {
 		model.removeAll();
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * nl.vu.qa_for_lod.graph.Graph#containsResource(com.hp.hpl.jena.rdf.model
-	 * .Resource)
-	 */
-	public boolean containsResource(Resource resource) {
-
-		return false;
-	}
 
 	/*
 	 * (non-Javadoc)
