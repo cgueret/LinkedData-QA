@@ -3,7 +3,6 @@
  */
 package nl.vu.qa_for_lod.metrics.impl;
 
-import java.util.Collection;
 import java.util.Set;
 
 import com.hp.hpl.jena.rdf.model.Resource;
@@ -54,16 +53,7 @@ public class ClusteringCoefficient implements Metric {
 		return c;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * nl.vu.qa_for_lod.metrics.Metric#isApplicableFor(nl.vu.qa_for_lod.Graph,
-	 * java.util.Collection)
-	 */
-	public boolean isApplicableFor(Graph graph, Collection<Resource> resources) {
-		return true;
-	}
+
 
 	/*
 	 * (non-Javadoc)

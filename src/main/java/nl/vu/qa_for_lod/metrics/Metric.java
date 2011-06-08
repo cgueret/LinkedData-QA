@@ -3,7 +3,6 @@
  */
 package nl.vu.qa_for_lod.metrics;
 
-import java.util.Collection;
 import com.hp.hpl.jena.rdf.model.Resource;
 
 import nl.vu.qa_for_lod.graph.Graph;
@@ -39,15 +38,6 @@ public interface Metric {
 	 * @return
 	 */
 	public abstract double getResult(Graph graph, Resource resource);
-
-	/**
-	 * Not every metric may be meaningful over a set of resources
-	 * 
-	 * @param graph
-	 * @param resources
-	 * @return True if the metric is applicable to a particular set of resources
-	 */
-	public abstract boolean isApplicableFor(Graph graph, Collection<Resource> resources);
 }
 
 /*

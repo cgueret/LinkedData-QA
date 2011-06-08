@@ -3,7 +3,6 @@
  */
 package nl.vu.qa_for_lod.metrics.impl;
 
-import java.util.Collection;
 import java.util.Map.Entry;
 
 import com.hp.hpl.jena.rdf.model.Resource;
@@ -41,17 +40,6 @@ public class Degree implements Metric {
 	 */
 	public double getResult(Graph graph, Resource resource) {
 		return graph.getDegree(resource);
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * nl.vu.qa_for_lod.metrics.Metric#isApplicableFor(nl.vu.qa_for_lod.Graph,
-	 * java.util.Collection)
-	 */
-	public boolean isApplicableFor(Graph graph, Collection<Resource> resources) {
-		return true;
 	}
 
 	/*

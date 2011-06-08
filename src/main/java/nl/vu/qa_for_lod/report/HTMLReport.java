@@ -18,6 +18,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 import java.util.Map.Entry;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.googlecode.charts4j.AxisLabels;
 import com.googlecode.charts4j.AxisLabelsFactory;
 import com.googlecode.charts4j.AxisStyle;
@@ -28,7 +32,6 @@ import com.googlecode.charts4j.GChart;
 import com.googlecode.charts4j.GCharts;
 import com.googlecode.charts4j.Line;
 import com.googlecode.charts4j.LineChart;
-import com.googlecode.charts4j.LineStyle;
 import com.googlecode.charts4j.Plots;
 import com.googlecode.charts4j.Shape;
 import com.hp.hpl.jena.rdf.model.Resource;
@@ -45,6 +48,7 @@ import nl.vu.qa_for_lod.metrics.Distribution.DistributionAxis;
  * 
  */
 public class HTMLReport {
+	static Logger logger = LoggerFactory.getLogger(HTMLReport.class);
 	private final DecimalFormat df = new DecimalFormat("###.##");
 	private final StringBuffer buffer = new StringBuffer();
 
@@ -82,21 +86,26 @@ public class HTMLReport {
 	 */
 	private void appendDistributions(MetricsExecutor executor) {
 		buffer.append("<h1>Metric distributions</h1>");
-		for (Entry<Metric, MetricData> entry : executor.metricsData()) {
+		for (Metric metric : executor.getMetrics()) {
+			MetricData data = executor.getMetricData(metric);
+
 			// Get the distributions
-			Distribution observedDistributionBefore = entry.getValue().getDistribution(MetricState.BEFORE);
-			Distribution observedDistributionAfter = entry.getValue().getDistribution(MetricState.AFTER);
-			Distribution idealDistribution = entry.getKey().getIdealDistribution(observedDistributionAfter);
+			Distribution observedDistributionBefore = data.getDistribution(MetricState.BEFORE);
+			Distribution observedDistributionAfter = data.getDistribution(MetricState.AFTER);
+			//Distribution idealDistribution = metric.getIdealDistribution(observedDistributionAfter);
 
 			// Normalise the distributions
 			observedDistributionBefore.normalize();
 			observedDistributionAfter.normalize();
-			idealDistribution.normalize();
+			//idealDistribution.normalize();
 
 			// Generate the chart
-			GChart chart = getChart(entry.getKey().getName(), observedDistributionBefore, observedDistributionAfter,
-					idealDistribution);
-			buffer.append("<img src=\"").append(chart.toURLForHTML()).append("\"/><br/>");
+			try {
+				GChart chart = getChart(metric.getName(), observedDistributionBefore, observedDistributionAfter);
+				buffer.append("<img style=\"float:left\" src=\"").append(chart.toURLForHTML()).append("\"/>");
+			} catch (IllegalArgumentException e) {
+				
+			}
 		}
 	}
 
@@ -105,33 +114,33 @@ public class HTMLReport {
 	 * @param observed
 	 * @param ideal
 	 */
-	private GChart getChart(String name, Distribution observedBefore, Distribution observedAfter, Distribution ideal) {
+	private GChart getChart(String name, Distribution observedBefore, Distribution observedAfter) throws IllegalArgumentException {
 		// Get the list of keys
 		TreeSet<Double> keys = new TreeSet<Double>();
 		keys.addAll(observedBefore.keySet());
 		keys.addAll(observedAfter.keySet());
-		keys.addAll(ideal.keySet());
+		//keys.addAll(ideal.keySet());
 
 		// Get the list of values for every key
 		List<Double> observedDataBefore = new ArrayList<Double>();
 		List<Double> observedDataAfter = new ArrayList<Double>();
-		List<Double> idealData = new ArrayList<Double>();
-		double d = 0;
+		//List<Double> idealData = new ArrayList<Double>();
+		//double d = 0;
 		for (Double key : keys) {
 			observedDataBefore.add(observedBefore.get(key));
 			observedDataAfter.add(observedAfter.get(key));
-			idealData.add(ideal.get(key));
-			d += ideal.get(key);
+			//idealData.add(ideal.get(key));
+			//d += ideal.get(key);
 		}
-		Line d1 = Plots.newLine(DataUtil.scale(observedDataBefore), Color.BLUE, "observed before");
-		Line d2 = Plots.newLine(DataUtil.scale(observedDataAfter), Color.GREEN, "observed after");
-		Line d3 = Plots.newLine(DataUtil.scale(idealData), Color.RED, "ideal");
-		d3.setLineStyle(LineStyle.MEDIUM_DOTTED_LINE);
+		Line d1 = Plots.newLine(DataUtil.scale(observedDataBefore), Color.BLUE, "before");
+		Line d2 = Plots.newLine(DataUtil.scale(observedDataAfter), Color.GREEN, "after");
+		//Line d3 = Plots.newLine(DataUtil.scale(idealData), Color.RED, "ideal");
+		//d3.setLineStyle(LineStyle.MEDIUM_DOTTED_LINE);
 
-		d1.addShapeMarkers(Shape.CIRCLE, Color.BLUE, 6);
-		d2.addShapeMarkers(Shape.CIRCLE, Color.GREEN, 6);
+		d1.addShapeMarkers(Shape.CIRCLE, Color.BLUE, 4);
+		d2.addShapeMarkers(Shape.CIRCLE, Color.GREEN, 4);
 
-		LineChart chart = GCharts.newLineChart(d1, d2, d3);
+		LineChart chart = GCharts.newLineChart(d1, d2);
 		AxisStyle axisStyle = AxisStyle.newAxisStyle(Color.BLACK, 13, AxisTextAlignment.CENTER);
 		AxisLabels count = AxisLabelsFactory.newNumericRangeAxisLabels(0,
 				Math.max(observedBefore.max(DistributionAxis.Y), observedAfter.max(DistributionAxis.Y)));
@@ -140,8 +149,8 @@ public class HTMLReport {
 		AxisLabels values = AxisLabelsFactory.newNumericRangeAxisLabels(keys.first(), keys.last());
 		values.setAxisStyle(axisStyle);
 		chart.addXAxisLabels(values);
-		chart.setSize(650, 400);
-		chart.setTitle("Observed and ideal distributions for " + name, Color.BLACK, 16);
+		chart.setSize(325, 200);
+		chart.setTitle(name, Color.BLACK, 16);
 
 		return chart;
 
@@ -184,11 +193,12 @@ public class HTMLReport {
 		buffer.append("<th>Status</th>");
 		buffer.append("<th>Improvement</th>");
 		buffer.append("</tr>");
-		for (Entry<Metric, MetricData> entry : executor.metricsData()) {
+		for (Metric metric : executor.getMetrics()) {
+			MetricData data = executor.getMetricData(metric);
 			buffer.append("<tr>");
-			buffer.append("<td>").append(entry.getKey().getName()).append("</td>");
-			buffer.append("<td>").append(entry.getValue().isGreen() ? "green " : "red ").append("</td>");
-			buffer.append("<td>").append(df.format(100 - entry.getValue().getRatioDistanceChange())).append("</td>");
+			buffer.append("<td>").append(metric.getName()).append("</td>");
+			buffer.append("<td>").append(data.isGreen() ? "green " : "red ").append("</td>");
+			buffer.append("<td>").append(df.format(100 - data.getRatioDistanceChange())).append("</td>");
 			buffer.append("</tr>");
 		}
 		buffer.append("</table>");
@@ -202,8 +212,8 @@ public class HTMLReport {
 	private void appendHallOfFame(MetricsExecutor executor) {
 		// Compute the hall of fame
 		Map<Resource, Double> scores = new HashMap<Resource, Double>();
-		for (Entry<Metric, MetricData> entry : executor.metricsData()) {
-			List<Resource> suspects = entry.getValue().getSuspiciousNodes();
+		for (Metric metric : executor.getMetrics()) {
+			List<Resource> suspects = executor.getMetricData(metric).getSuspiciousNodes();
 			for (int index = 0; index < suspects.size(); index++) {
 				Resource key = suspects.get(index);
 				if (!scores.containsKey(key))
@@ -215,7 +225,7 @@ public class HTMLReport {
 		// Get an ordered list of scores
 		TreeSet<Double> keys = new TreeSet<Double>();
 		keys.addAll(scores.values());
-		double max = executor.metricsData().size() * scores.size() * 1.0d;
+		double max = executor.getMetrics().size() * scores.size() * 1.0d;
 
 		// Insert the HTML code
 		buffer.append("<h1>Most suspicious nodes</h1>");
@@ -242,6 +252,7 @@ public class HTMLReport {
 	 * 
 	 */
 	private void close() {
+		buffer.append("<div style=\"clear:both;\"></div><br/>");
 		buffer.append("</html>");
 	}
 

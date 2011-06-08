@@ -6,6 +6,9 @@ package nl.vu.qa_for_lod;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import nl.vu.qa_for_lod.graph.DataProvider;
 import nl.vu.qa_for_lod.graph.Graph;
 import nl.vu.qa_for_lod.graph.impl.JenaGraph;
@@ -21,6 +24,7 @@ import com.hp.hpl.jena.shared.NotFoundException;
  * 
  */
 public class MetricsTask implements Runnable {
+	static Logger logger = LoggerFactory.getLogger(MetricsTask.class);
 	private final Resource resource;
 	private final DataProvider dataFetcher;
 	private final MetricsExecutor metricsExecutor;
@@ -42,6 +46,8 @@ public class MetricsTask implements Runnable {
 	 * @see java.lang.Runnable#run()
 	 */
 	public void run() {
+		//logger.info("=> " + resource);
+		
 		// Create a graph
 		Graph graph = new JenaGraph();
 
@@ -66,6 +72,7 @@ public class MetricsTask implements Runnable {
 			dereferencedResources.add(resource);
 
 			// Execute the metrics
+			//logger.info("BEFORE");
 			for (Metric metric : metricsExecutor.getMetrics())
 				metricsExecutor.getMetricData(metric).setResult(MetricState.BEFORE, resource,
 						metric.getResult(graph, resource));
@@ -86,6 +93,7 @@ public class MetricsTask implements Runnable {
 			}
 
 			// Re-execute the metrics
+			//logger.info("AFTER");
 			for (Metric metric : metricsExecutor.getMetrics())
 				metricsExecutor.getMetricData(metric).setResult(MetricState.AFTER, resource,
 						metric.getResult(graph, resource));

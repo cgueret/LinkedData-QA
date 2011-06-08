@@ -5,12 +5,13 @@ package nl.vu.qa_for_lod;
 
 import java.awt.Dimension;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Map.Entry;
+import java.util.TreeSet;
+
 import javax.swing.JFrame;
 import javax.swing.JProgressBar;
 
@@ -31,7 +32,7 @@ import nl.vu.qa_for_lod.report.MetricState;
  */
 // http://wiki.gephi.org/index.php/Toolkit_portal
 public class MetricsExecutor {
-	protected static Logger logger = LoggerFactory.getLogger(MetricsExecutor.class);
+	static Logger logger = LoggerFactory.getLogger(MetricsExecutor.class);
 	private final Map<Metric, MetricData> metricsData = new HashMap<Metric, MetricData>();
 	private final List<Resource> resourceQueue = new ArrayList<Resource>();
 	private final DataProvider extraTriples;
@@ -127,15 +128,10 @@ public class MetricsExecutor {
 	/**
 	 * @return
 	 */
-	public Set<Entry<Metric, MetricData>> metricsData() {
-		return metricsData.entrySet();
-	}
-
-	/**
-	 * @return
-	 */
-	public Collection<Metric> getMetrics() {
-		return metricsData.keySet();
+	public Set<Metric> getMetrics() {
+		Set<Metric> sortedKeys = new TreeSet<Metric>(new MetricSorter());
+		sortedKeys.addAll(metricsData.keySet());
+		return sortedKeys;
 	}
 
 	public int queueSize() {
@@ -147,6 +143,12 @@ public class MetricsExecutor {
 	 */
 	public MetricData getMetricData(Metric metric) {
 		return metricsData.get(metric);
+	}
+
+	class MetricSorter implements Comparator<Metric> {
+		public int compare(Metric o1, Metric o2) {
+			return o1.getName().compareTo(o2.getName());
+		}
 	}
 }
 
