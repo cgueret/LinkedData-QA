@@ -44,10 +44,8 @@ public class FileDataProvider implements DataProvider {
 		StmtIterator iter = model.listStatements();
 		while (iter.hasNext()) {
 			Statement stmt = iter.nextStatement();
-			if (stmt.getObject() instanceof Resource) {
+			if (stmt.getSubject() instanceof Resource && stmt.getObject() instanceof Resource)
 				index(stmt.getSubject(), stmt);
-				index(stmt.getObject().asResource(), stmt);
-			}
 		}
 		model.close();
 

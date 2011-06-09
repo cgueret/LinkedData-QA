@@ -68,14 +68,13 @@ public class Any23DataProvider implements DataProvider {
 
 		public void receiveTriple(org.openrdf.model.Resource s, org.openrdf.model.URI p, org.openrdf.model.Value o,
 				org.openrdf.model.URI g, ExtractionContext context) throws TripleHandlerException {
-			if (o instanceof org.openrdf.model.Resource && !(o instanceof org.openrdf.model.BNode)) {
-				if (s.toString().equals(resource.getURI()) || o.toString().equals(resource.getURI())) {
-					org.openrdf.model.Resource r = (org.openrdf.model.Resource) o;
-					com.hp.hpl.jena.rdf.model.Resource jenaS = model.createResource(s.stringValue());
-					com.hp.hpl.jena.rdf.model.Property jenaP = model.createProperty(p.stringValue());
-					com.hp.hpl.jena.rdf.model.RDFNode jenaO = model.createResource(r.stringValue());
-					buffer.add(model.createStatement(jenaS, jenaP, jenaO));
-				}
+			if (o instanceof org.openrdf.model.Resource && !(o instanceof org.openrdf.model.BNode)
+					&& s.toString().equals(resource.getURI())) {
+				org.openrdf.model.Resource r = (org.openrdf.model.Resource) o;
+				com.hp.hpl.jena.rdf.model.Resource jenaS = model.createResource(s.stringValue());
+				com.hp.hpl.jena.rdf.model.Property jenaP = model.createProperty(p.stringValue());
+				com.hp.hpl.jena.rdf.model.RDFNode jenaO = model.createResource(r.stringValue());
+				buffer.add(model.createStatement(jenaS, jenaP, jenaO));
 			}
 		}
 
@@ -86,6 +85,7 @@ public class Any23DataProvider implements DataProvider {
 		}
 
 	}
+
 	private final static Logger logger = LoggerFactory.getLogger(Any23DataProvider.class);
 	private final static Any23 runner = new Any23();
 	private final Property HAS_BLACK_LISTED = ResourceFactory.createProperty("http://example.org/blacklisted");
@@ -96,7 +96,7 @@ public class Any23DataProvider implements DataProvider {
 	private final Resource THIS = ResourceFactory.createResource("http://example.org/this");
 
 	/**
-	 * @param cacheDir 
+	 * @param cacheDir
 	 * 
 	 */
 	public Any23DataProvider(String cacheDir) {
