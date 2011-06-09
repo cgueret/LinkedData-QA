@@ -53,17 +53,13 @@ public class FileDataProvider implements DataProvider {
 
 	}
 
-	/**
-	 * @param asResource
-	 * @param stmt
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see nl.vu.qa_for_lod.graph.DataProvider#close()
 	 */
-	private void index(Resource resource, Statement statement) {
-		Set<Statement> statements = data.get(resource);
-		if (statements == null) {
-			statements = new HashSet<Statement>();
-			data.put(resource, statements);
-		}
-		statements.add(statement);
+	public void close() {
+		data.clear();
 	}
 
 	/*
@@ -84,13 +80,17 @@ public class FileDataProvider implements DataProvider {
 		return data.keySet();
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see nl.vu.qa_for_lod.graph.DataProvider#close()
+	/**
+	 * @param asResource
+	 * @param stmt
 	 */
-	public void close() {
-		data.clear();
+	private void index(Resource resource, Statement statement) {
+		Set<Statement> statements = data.get(resource);
+		if (statements == null) {
+			statements = new HashSet<Statement>();
+			data.put(resource, statements);
+		}
+		statements.add(statement);
 	}
 
 	/**

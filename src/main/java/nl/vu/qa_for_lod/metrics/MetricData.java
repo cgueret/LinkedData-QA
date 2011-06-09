@@ -11,12 +11,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.Map.Entry;
-import java.util.concurrent.locks. ReentrantLock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import nl.vu.qa_for_lod.report.MetricState;
 
 import com.hp.hpl.jena.rdf.model.Resource;
 
@@ -26,13 +24,13 @@ import com.hp.hpl.jena.rdf.model.Resource;
  */
 public class MetricData {
 	protected static final Logger logger = LoggerFactory.getLogger(MetricData.class);
-	private ReentrantLock lock = new ReentrantLock(false);
-	
 	/** Distance to ideal value */
 	private Map<MetricState, Double> distanceMap = new HashMap<MetricState, Double>();
 
 	/** Distribution of the results */
 	private Map<MetricState, Distribution> distributionMap = new HashMap<MetricState, Distribution>();
+
+	private ReentrantLock lock = new ReentrantLock(false);
 
 	/** Raw results mapping every node to a value */
 	private Map<MetricState, Results> resultsMap = new HashMap<MetricState, Results>();
@@ -124,7 +122,7 @@ public class MetricData {
 	 */
 	public void setResult(MetricState state, Resource node, Double value) {
 		lock.lock();
-		
+
 		// Get, and init if needed, the results table
 		Results results = resultsMap.get(state);
 		if (results == null) {
@@ -138,7 +136,7 @@ public class MetricData {
 		// Invalidate the distributions and distances
 		distributionMap.put(state, null);
 		distanceMap.put(state, null);
-		
+
 		lock.unlock();
 	}
 }

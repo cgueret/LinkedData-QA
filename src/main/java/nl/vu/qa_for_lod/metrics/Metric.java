@@ -21,7 +21,9 @@ public interface Metric {
 	 *            ideal distribution
 	 * @return
 	 */
-	public abstract Distribution getIdealDistribution(Distribution inputDistribution);
+	// public abstract Distribution getIdealDistribution(Distribution
+	// inputDistribution);
+	public abstract double getDistanceToIdeal(Distribution inputDistribution);
 
 	/**
 	 * Get the name of the metric

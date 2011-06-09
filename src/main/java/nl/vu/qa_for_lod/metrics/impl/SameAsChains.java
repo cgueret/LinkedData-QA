@@ -11,8 +11,13 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.Resource;
+import com.hp.hpl.jena.rdf.model.ResourceFactory;
 
+import org.openrdf.model.vocabulary.OWL;
+
+import nl.vu.qa_for_lod.graph.Direction;
 import nl.vu.qa_for_lod.graph.Graph;
 import nl.vu.qa_for_lod.metrics.Distribution;
 import nl.vu.qa_for_lod.metrics.Metric;
@@ -30,7 +35,22 @@ import nl.vu.qa_for_lod.metrics.Metric;
  */
 public class SameAsChains implements Metric {
 	static Logger logger = LoggerFactory.getLogger(SameAsChains.class);
-	private final static String SAME_AS = "http://www.w3.org/2002/07/owl#sameAs";
+	private final static Property SAME_AS = ResourceFactory.createProperty(OWL.SAMEAS.stringValue());
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * nl.vu.qa_for_lod.metrics.Metric#getDistanceToIdeal(nl.vu.qa_for_lod.metrics
+	 * .Distribution)
+	 */
+	public double getDistanceToIdeal(Distribution inputDistribution) {
+		// Get the average
+		double average = inputDistribution.getAverage();
+
+		// We want to reach 0
+		return average;
+	}
 
 	/*
 	 * (non-Javadoc)
@@ -39,29 +59,6 @@ public class SameAsChains implements Metric {
 	 */
 	public String getName() {
 		return "Open sameAs chains";
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see nl.vu.qa_for_lod.metrics.Metric#getResult(nl.vu.qa_for_lod.Graph,
-	 * com.hp.hpl.jena.rdf.model.Resource)
-	 */
-	public double getResult(Graph graph, Resource resource) {
-		// Search for the paths
-		Set<List<Resource>> paths = new HashSet<List<Resource>>();
-		List<Resource> path = new ArrayList<Resource>();
-		path.add(resource);
-		getPaths(graph, paths, path);
-
-		// Count the open ones
-		double open = 0;
-		if (paths.size() > 0)
-			for (List<Resource> p : paths)
-				if (p.size() > 2 && !p.get(p.size() - 1).equals(resource))
-					open++;
-
-		return open;
 	}
 
 	/**
@@ -77,7 +74,7 @@ public class SameAsChains implements Metric {
 	private void getPaths(Graph graph, Set<List<Resource>> paths, List<Resource> currentPath) {
 		Resource currentNode = currentPath.get(currentPath.size() - 1);
 
-		Set<Resource> nextNodes = graph.getNeighbours(currentNode, SAME_AS);
+		Set<Resource> nextNodes = graph.getNeighbours(currentNode, Direction.BOTH, SAME_AS);
 		if (nextNodes.isEmpty()) {
 			List<Resource> newPath = new ArrayList<Resource>();
 			newPath.addAll(currentPath);
@@ -102,19 +99,24 @@ public class SameAsChains implements Metric {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * nl.vu.qa_for_lod.metrics.Metric#getIdealDistribution(nl.vu.qa_for_lod
-	 * .metrics.Distribution)
+	 * @see nl.vu.qa_for_lod.metrics.Metric#getResult(nl.vu.qa_for_lod.Graph,
+	 * com.hp.hpl.jena.rdf.model.Resource)
 	 */
-	public Distribution getIdealDistribution(Distribution inputDistribution) {
-		// We should have no incomplete sameAs chains
-		Distribution result = new Distribution();
-		double total = 0;
-		for (Double key : inputDistribution.keySet())
-			total += inputDistribution.get(key);
+	public double getResult(Graph graph, Resource resource) {
+		// Search for the paths
+		Set<List<Resource>> paths = new HashSet<List<Resource>>();
+		List<Resource> path = new ArrayList<Resource>();
+		path.add(resource);
+		getPaths(graph, paths, path);
 
-		result.set(0, total);
-		return result;
+		// Count the open ones
+		double open = 0;
+		if (paths.size() > 0)
+			for (List<Resource> p : paths)
+				if (p.size() > 2 && !p.get(p.size() - 1).equals(resource))
+					open++;
+
+		return open;
 	}
 
 }

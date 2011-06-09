@@ -1,12 +1,12 @@
 /**
  * 
  */
-package nl.vu.qa_for_lod.report;
+package nl.vu.qa_for_lod.graph;
 
 /**
  * @author Christophe Guéret <christophe.gueret@gmail.com>
  * 
  */
-public enum MetricState {
-	AFTER, BEFORE
+public enum Direction {
+	BOTH, IN, OUT
 }

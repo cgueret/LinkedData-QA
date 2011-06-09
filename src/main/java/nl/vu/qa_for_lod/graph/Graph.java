@@ -5,6 +5,7 @@ package nl.vu.qa_for_lod.graph;
 
 import java.util.Set;
 
+import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.Statement;
 
@@ -24,6 +25,14 @@ public interface Graph {
 	public void clear();
 
 	/**
+	 * @param fromResource
+	 * @param toResource
+	 * @param directed
+	 * @return
+	 */
+	public boolean containsEdge(Resource fromResource, Resource toResource, boolean directed);
+
+	/**
 	 * @param resource
 	 * @return
 	 */
@@ -31,17 +40,10 @@ public interface Graph {
 
 	/**
 	 * @param resource
-	 * @param property
+	 * @param direction
+	 * @param propertyURI
 	 * @return
 	 */
-	public Set<Resource> getNeighbours(Resource resource, String property);
-
-	/**
-	 * @param fromResource
-	 * @param toResource
-	 * @param directed
-	 * @return
-	 */
-	public boolean containsEdge(Resource fromResource, Resource toResource, boolean directed);
+	public Set<Resource> getNeighbours(Resource resource, Direction direction, Property property);
 
 }

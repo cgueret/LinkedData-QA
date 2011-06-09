@@ -13,7 +13,7 @@ import nl.vu.qa_for_lod.graph.DataProvider;
 import nl.vu.qa_for_lod.graph.Graph;
 import nl.vu.qa_for_lod.graph.impl.JenaGraph;
 import nl.vu.qa_for_lod.metrics.Metric;
-import nl.vu.qa_for_lod.report.MetricState;
+import nl.vu.qa_for_lod.metrics.MetricState;
 
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.Statement;
@@ -25,15 +25,16 @@ import com.hp.hpl.jena.shared.NotFoundException;
  */
 public class MetricsTask implements Runnable {
 	static Logger logger = LoggerFactory.getLogger(MetricsTask.class);
-	private final Resource resource;
 	private final DataProvider dataFetcher;
-	private final MetricsExecutor metricsExecutor;
 	private final DataProvider extraTriples;
+	private final MetricsExecutor metricsExecutor;
+	private final Resource resource;
 
 	/**
 	 * @param resource
 	 */
-	public MetricsTask(MetricsExecutor metricsExecutor, Resource resource, DataProvider dataFetcher, DataProvider extraTriples) {
+	public MetricsTask(MetricsExecutor metricsExecutor, Resource resource, DataProvider dataFetcher,
+			DataProvider extraTriples) {
 		this.resource = resource;
 		this.dataFetcher = dataFetcher;
 		this.metricsExecutor = metricsExecutor;
@@ -46,8 +47,8 @@ public class MetricsTask implements Runnable {
 	 * @see java.lang.Runnable#run()
 	 */
 	public void run() {
-		//logger.info("=> " + resource);
-		
+		// logger.info("=> " + resource);
+
 		// Create a graph
 		Graph graph = new JenaGraph();
 
@@ -72,7 +73,7 @@ public class MetricsTask implements Runnable {
 			dereferencedResources.add(resource);
 
 			// Execute the metrics
-			//logger.info("BEFORE");
+			// logger.info("BEFORE");
 			for (Metric metric : metricsExecutor.getMetrics())
 				metricsExecutor.getMetricData(metric).setResult(MetricState.BEFORE, resource,
 						metric.getResult(graph, resource));
@@ -93,14 +94,14 @@ public class MetricsTask implements Runnable {
 			}
 
 			// Re-execute the metrics
-			//logger.info("AFTER");
+			// logger.info("AFTER");
 			for (Metric metric : metricsExecutor.getMetrics())
 				metricsExecutor.getMetricData(metric).setResult(MetricState.AFTER, resource,
 						metric.getResult(graph, resource));
 		} catch (NotFoundException e) {
 			// Just skip resources that don't work
 		} finally {
-			//metricsExecutor.incrementBar();
+			// metricsExecutor.incrementBar();
 		}
 	}
 

@@ -41,6 +41,7 @@ import nl.vu.qa_for_lod.graph.DataProvider;
 import nl.vu.qa_for_lod.metrics.Distribution;
 import nl.vu.qa_for_lod.metrics.Metric;
 import nl.vu.qa_for_lod.metrics.MetricData;
+import nl.vu.qa_for_lod.metrics.MetricState;
 import nl.vu.qa_for_lod.metrics.Distribution.DistributionAxis;
 
 /**
@@ -49,8 +50,23 @@ import nl.vu.qa_for_lod.metrics.Distribution.DistributionAxis;
  */
 public class HTMLReport {
 	static Logger logger = LoggerFactory.getLogger(HTMLReport.class);
-	private final DecimalFormat df = new DecimalFormat("###.##");
+	/**
+	 * @param datasetName
+	 * @param executor
+	 * @param extraLinks
+	 * @return
+	 */
+	public static HTMLReport createReport(String datasetName, MetricsExecutor executor, DataProvider extraLinks) {
+		HTMLReport report = new HTMLReport(datasetName);
+		report.appendMetricStatuses(executor);
+		report.appendDistributions(executor);
+		report.appendHallOfFame(executor);
+		report.close();
+		return report;
+	}
 	private final StringBuffer buffer = new StringBuffer();
+
+	private final DecimalFormat df = new DecimalFormat("###.##");
 
 	/**
 	 * @param datasetName
@@ -67,21 +83,6 @@ public class HTMLReport {
 	}
 
 	/**
-	 * @param datasetName
-	 * @param executor
-	 * @param extraLinks
-	 * @return
-	 */
-	public static HTMLReport createReport(String datasetName, MetricsExecutor executor, DataProvider extraLinks) {
-		HTMLReport report = new HTMLReport(datasetName);
-		report.appendMetricStatuses(executor);
-		report.appendHallOfFame(executor);
-		report.appendDistributions(executor);
-		report.close();
-		return report;
-	}
-
-	/**
 	 * @param executor
 	 */
 	private void appendDistributions(MetricsExecutor executor) {
@@ -92,116 +93,23 @@ public class HTMLReport {
 			// Get the distributions
 			Distribution observedDistributionBefore = data.getDistribution(MetricState.BEFORE);
 			Distribution observedDistributionAfter = data.getDistribution(MetricState.AFTER);
-			//Distribution idealDistribution = metric.getIdealDistribution(observedDistributionAfter);
+			// Distribution idealDistribution =
+			// metric.getIdealDistribution(observedDistributionAfter);
 
 			// Normalise the distributions
-			observedDistributionBefore.normalize();
-			observedDistributionAfter.normalize();
-			//idealDistribution.normalize();
+			// observedDistributionBefore.normalize();
+			// observedDistributionAfter.normalize();
+			// idealDistribution.normalize();
 
 			// Generate the chart
 			try {
 				GChart chart = getChart(metric.getName(), observedDistributionBefore, observedDistributionAfter);
 				buffer.append("<img style=\"float:left\" src=\"").append(chart.toURLForHTML()).append("\"/>");
 			} catch (IllegalArgumentException e) {
-				
+
 			}
 		}
-	}
-
-	/**
-	 * @param name
-	 * @param observed
-	 * @param ideal
-	 */
-	private GChart getChart(String name, Distribution observedBefore, Distribution observedAfter) throws IllegalArgumentException {
-		// Get the list of keys
-		TreeSet<Double> keys = new TreeSet<Double>();
-		keys.addAll(observedBefore.keySet());
-		keys.addAll(observedAfter.keySet());
-		//keys.addAll(ideal.keySet());
-
-		// Get the list of values for every key
-		List<Double> observedDataBefore = new ArrayList<Double>();
-		List<Double> observedDataAfter = new ArrayList<Double>();
-		//List<Double> idealData = new ArrayList<Double>();
-		//double d = 0;
-		for (Double key : keys) {
-			observedDataBefore.add(observedBefore.get(key));
-			observedDataAfter.add(observedAfter.get(key));
-			//idealData.add(ideal.get(key));
-			//d += ideal.get(key);
-		}
-		Line d1 = Plots.newLine(DataUtil.scale(observedDataBefore), Color.BLUE, "before");
-		Line d2 = Plots.newLine(DataUtil.scale(observedDataAfter), Color.GREEN, "after");
-		//Line d3 = Plots.newLine(DataUtil.scale(idealData), Color.RED, "ideal");
-		//d3.setLineStyle(LineStyle.MEDIUM_DOTTED_LINE);
-
-		d1.addShapeMarkers(Shape.CIRCLE, Color.BLUE, 4);
-		d2.addShapeMarkers(Shape.CIRCLE, Color.GREEN, 4);
-
-		LineChart chart = GCharts.newLineChart(d1, d2);
-		AxisStyle axisStyle = AxisStyle.newAxisStyle(Color.BLACK, 13, AxisTextAlignment.CENTER);
-		AxisLabels count = AxisLabelsFactory.newNumericRangeAxisLabels(0,
-				Math.max(observedBefore.max(DistributionAxis.Y), observedAfter.max(DistributionAxis.Y)));
-		count.setAxisStyle(axisStyle);
-		chart.addYAxisLabels(count);
-		AxisLabels values = AxisLabelsFactory.newNumericRangeAxisLabels(keys.first(), keys.last());
-		values.setAxisStyle(axisStyle);
-		chart.addXAxisLabels(values);
-		chart.setSize(325, 200);
-		chart.setTitle(name, Color.BLACK, 16);
-
-		return chart;
-
-	}
-
-	/**
-	 * @param uri
-	 * @param fileName
-	 * @throws IOException
-	 */
-	protected void saveURIToFile(String uri, String fileName) throws IOException {
-		URL url = new URL(uri);
-		URLConnection urlConnection = url.openConnection();
-		InputStream in = new BufferedInputStream(urlConnection.getInputStream());
-		byte[] datad = new byte[urlConnection.getContentLength()];
-		int bytesRead = 0;
-		int offset = 0;
-		while (offset < urlConnection.getContentLength()) {
-			bytesRead = in.read(datad, offset, datad.length - offset);
-			if (bytesRead == -1)
-				break;
-			offset += bytesRead;
-		}
-		in.close();
-
-		FileOutputStream out = new FileOutputStream(fileName);
-		out.write(datad);
-		out.flush();
-		out.close();
-	}
-
-	/**
-	 * @param executor
-	 * 
-	 */
-	private void appendMetricStatuses(MetricsExecutor executor) {
-		buffer.append("<h1>Metric statuses</h1>");
-		buffer.append("<table><tr>");
-		buffer.append("<th>Metric name</th>");
-		buffer.append("<th>Status</th>");
-		buffer.append("<th>Improvement</th>");
-		buffer.append("</tr>");
-		for (Metric metric : executor.getMetrics()) {
-			MetricData data = executor.getMetricData(metric);
-			buffer.append("<tr>");
-			buffer.append("<td>").append(metric.getName()).append("</td>");
-			buffer.append("<td>").append(data.isGreen() ? "green " : "red ").append("</td>");
-			buffer.append("<td>").append(df.format(100 - data.getRatioDistanceChange())).append("</td>");
-			buffer.append("</tr>");
-		}
-		buffer.append("</table>");
+		buffer.append("<div style=\"clear:both;\"></div>");
 	}
 
 	/**
@@ -249,11 +157,109 @@ public class HTMLReport {
 	}
 
 	/**
+	 * @param executor
+	 * 
+	 */
+	private void appendMetricStatuses(MetricsExecutor executor) {
+		buffer.append("<h1>Metric statuses</h1>");
+		buffer.append("<table><tr>");
+		buffer.append("<th>Metric name</th>");
+		buffer.append("<th>Status</th>");
+		buffer.append("<th>Improvement</th>");
+		buffer.append("</tr>");
+		for (Metric metric : executor.getMetrics()) {
+			MetricData data = executor.getMetricData(metric);
+			buffer.append("<tr>");
+			buffer.append("<td>").append(metric.getName()).append("</td>");
+			buffer.append("<td>").append(data.isGreen() ? "green " : "red ").append("</td>");
+			buffer.append("<td>").append(df.format(100 - data.getRatioDistanceChange())).append("</td>");
+			buffer.append("</tr>");
+		}
+		buffer.append("</table>");
+	}
+
+	/**
 	 * 
 	 */
 	private void close() {
-		buffer.append("<div style=\"clear:both;\"></div><br/>");
 		buffer.append("</html>");
+	}
+
+	/**
+	 * @param name
+	 * @param observed
+	 * @param ideal
+	 */
+	private GChart getChart(String name, Distribution observedBefore, Distribution observedAfter)
+			throws IllegalArgumentException {
+		// Get the list of keys
+		TreeSet<Double> keys = new TreeSet<Double>();
+		keys.addAll(observedBefore.keySet());
+		keys.addAll(observedAfter.keySet());
+		// keys.remove(keys.first());
+
+		// keys.addAll(ideal.keySet());
+		// Get the list of values for every key
+		List<Double> observedDataBefore = new ArrayList<Double>();
+		List<Double> observedDataAfter = new ArrayList<Double>();
+		// List<Double> idealData = new ArrayList<Double>();
+		// double d = 0;
+		for (Double key : keys) {
+			observedDataBefore.add(observedBefore.get(key));
+			observedDataAfter.add(observedAfter.get(key));
+			// idealData.add(ideal.get(key));
+			// d += ideal.get(key);
+		}
+		Line d1 = Plots.newLine(DataUtil.scale(observedDataBefore), Color.BLUE, "before");
+		Line d2 = Plots.newLine(DataUtil.scale(observedDataAfter), Color.GREEN, "after");
+
+		// Line d3 = Plots.newLine(DataUtil.scale(idealData), Color.RED,
+		// "ideal");
+		// d3.setLineStyle(LineStyle.MEDIUM_DOTTED_LINE);
+
+		d1.addShapeMarkers(Shape.CIRCLE, Color.BLUE, 4);
+		d2.addShapeMarkers(Shape.CIRCLE, Color.GREEN, 4);
+
+		LineChart chart = GCharts.newLineChart(d1, d2);
+		AxisStyle axisStyle = AxisStyle.newAxisStyle(Color.BLACK, 13, AxisTextAlignment.CENTER);
+		AxisLabels count = AxisLabelsFactory.newNumericRangeAxisLabels(0,
+				Math.max(observedBefore.max(DistributionAxis.Y), observedAfter.max(DistributionAxis.Y)));
+		count.setAxisStyle(axisStyle);
+		chart.addYAxisLabels(count);
+		AxisLabels values = AxisLabelsFactory.newNumericRangeAxisLabels(keys.first(), keys.last());
+		values.setAxisStyle(axisStyle);
+		chart.addXAxisLabels(values);
+		chart.setSize(350, 200);
+		chart.setTitle(name, Color.BLACK, 16);
+
+		return chart;
+
+	}
+
+	/**
+	 * @param uri
+	 * @param fileName
+	 * @throws IOException
+	 */
+	protected void saveURIToFile(String uri, String fileName) throws IOException {
+		URL url = new URL(uri);
+		URLConnection urlConnection = url.openConnection();
+		InputStream in = new BufferedInputStream(urlConnection.getInputStream());
+		byte[] datad = new byte[urlConnection.getContentLength()];
+		int bytesRead = 0;
+		int offset = 0;
+		while (offset < urlConnection.getContentLength()) {
+			bytesRead = in.read(datad, offset, datad.length - offset);
+			if (bytesRead == -1)
+				break;
+			offset += bytesRead;
+		}
+		in.close();
+
+		FileOutputStream out = new FileOutputStream(fileName);
+		out.write(datad);
+		out.flush();
+		out.close();
 	}
 
 	/**

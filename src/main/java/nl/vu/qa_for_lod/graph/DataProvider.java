@@ -14,14 +14,14 @@ import com.hp.hpl.jena.rdf.model.Statement;
  */
 public interface DataProvider {
 	/**
+	 * 
+	 */
+	public void close();
+
+	/**
 	 * @param resource
 	 * @return
 	 */
 	public Set<Statement> get(Resource resource);
-	
-	/**
-	 * 
-	 */
-	public void close();
-	
+
 }

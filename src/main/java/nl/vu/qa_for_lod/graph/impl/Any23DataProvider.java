@@ -34,17 +34,9 @@ import nl.vu.qa_for_lod.graph.DataProvider;
  * 
  */
 public class Any23DataProvider implements DataProvider {
-	private final static Logger logger = LoggerFactory.getLogger(Any23DataProvider.class);
-	private final static Any23 runner = new Any23();
-	private final Model model = TDBFactory.createModel("data-cache");
-	private final ReentrantLock lock = new ReentrantLock(false);
-	private final Resource THIS = ResourceFactory.createResource("http://example.org/this");
-	private final Property HAS_BLACK_LISTED = ResourceFactory.createProperty("http://example.org/blacklisted");
-	private final Set<Resource> tempBlackList = new HashSet<Resource>();
-
 	protected class MyHandler implements TripleHandler {
-		private final Resource resource;
 		private final List<Statement> buffer = new ArrayList<Statement>();
+		private final Resource resource;
 
 		/**
 		 * @param resource
@@ -54,10 +46,24 @@ public class Any23DataProvider implements DataProvider {
 			this.resource = resource;
 		}
 
-		public void startDocument(org.openrdf.model.URI documentURI) throws TripleHandlerException {
+		public void close() throws TripleHandlerException {
+		}
+
+		public void closeContext(ExtractionContext context) throws TripleHandlerException {
+		}
+
+		public void endDocument(org.openrdf.model.URI documentURI) throws TripleHandlerException {
+			lock.lock();
+			model.add(buffer);
+			model.commit();
+			lock.unlock();
 		}
 
 		public void openContext(ExtractionContext context) throws TripleHandlerException {
+		}
+
+		public void receiveNamespace(String prefix, String uri, ExtractionContext context)
+				throws TripleHandlerException {
 		}
 
 		public void receiveTriple(org.openrdf.model.Resource s, org.openrdf.model.URI p, org.openrdf.model.Value o,
@@ -73,27 +79,21 @@ public class Any23DataProvider implements DataProvider {
 			}
 		}
 
-		public void receiveNamespace(String prefix, String uri, ExtractionContext context)
-				throws TripleHandlerException {
-		}
-
-		public void closeContext(ExtractionContext context) throws TripleHandlerException {
-		}
-
-		public void endDocument(org.openrdf.model.URI documentURI) throws TripleHandlerException {
-			lock.lock();
-			model.add(buffer);
-			model.commit();
-			lock.unlock();
-		}
-
 		public void setContentLength(long contentLength) {
 		}
 
-		public void close() throws TripleHandlerException {
+		public void startDocument(org.openrdf.model.URI documentURI) throws TripleHandlerException {
 		}
 
 	}
+	private final static Logger logger = LoggerFactory.getLogger(Any23DataProvider.class);
+	private final static Any23 runner = new Any23();
+	private final Property HAS_BLACK_LISTED = ResourceFactory.createProperty("http://example.org/blacklisted");
+	private final ReentrantLock lock = new ReentrantLock(false);
+	private final Model model = TDBFactory.createModel("data-cache");
+	private final Set<Resource> tempBlackList = new HashSet<Resource>();
+
+	private final Resource THIS = ResourceFactory.createResource("http://example.org/this");
 
 	/**
 	 * 
@@ -101,6 +101,17 @@ public class Any23DataProvider implements DataProvider {
 	public Any23DataProvider() {
 		runner.setHTTPUserAgent("LATC QA tool prototype");
 		// model.removeAll(THIS, HAS_BLACK_LISTED, (RDFNode)null);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see nl.vu.qa_for_lod.graph.DataProvider#close()
+	 */
+	public void close() {
+		lock.lock();
+		model.close();
+		lock.unlock();
 	}
 
 	/*
@@ -130,22 +141,11 @@ public class Any23DataProvider implements DataProvider {
 			lock.lock();
 			stmts = model.listStatements(resource, (Property) null, (RDFNode) null).toSet();
 			if (stmts.size() == 0 && !failed)
-				model.add(THIS, HAS_BLACK_LISTED, resource);				
+				model.add(THIS, HAS_BLACK_LISTED, resource);
 			lock.unlock();
 		}
 
 		return stmts;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see nl.vu.qa_for_lod.graph.DataProvider#close()
-	 */
-	public void close() {
-		lock.lock();
-		model.close();
-		lock.unlock();
 	}
 
 }

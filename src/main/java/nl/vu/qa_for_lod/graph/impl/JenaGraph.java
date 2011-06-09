@@ -13,6 +13,7 @@ import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.Statement;
 
+import nl.vu.qa_for_lod.graph.Direction;
 import nl.vu.qa_for_lod.graph.Graph;
 
 /**
@@ -42,6 +43,20 @@ public class JenaGraph implements Graph {
 		model.removeAll();
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * nl.vu.qa_for_lod.graph.Graph#containsEdge(com.hp.hpl.jena.rdf.model.Resource
+	 * , com.hp.hpl.jena.rdf.model.Resource)
+	 */
+	public boolean containsEdge(Resource fromResource, Resource toResource, boolean directed) {
+		boolean connected = model.listStatements(fromResource, (Property) null, toResource).toList().size() > 0;
+		// If we ignore the direction and from->to doesn't work, try the inverse
+		if (!directed && !connected)
+			connected = model.listStatements(toResource, (Property) null, fromResource).toList().size() > 0;
+		return connected;
+	}
 
 	/*
 	 * (non-Javadoc)
@@ -62,38 +77,24 @@ public class JenaGraph implements Graph {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * nl.vu.qa_for_lod.graph.Graph#getNeighbours(com.hp.hpl.jena.rdf.model.
-	 * Resource, java.lang.String)
+	 * @see nl.vu.qa_for_lod.graph.Graph#getNeighbours(Resource, Direction,
+	 * Property)
 	 */
-	public Set<Resource> getNeighbours(Resource resource, String propertyURI) {
+	public Set<Resource> getNeighbours(Resource resource, Direction direction, Property property) {
+		// Prepare set
 		Set<Resource> neighbours = new HashSet<Resource>();
 
-		Property property = null;
-		if (propertyURI != null)
-			property = model.createProperty(propertyURI);
+		// Add outgoing relations
+		if (direction.equals(Direction.OUT) || direction.equals(Direction.BOTH))
+			for (Statement statement : model.listStatements(resource, property, (RDFNode) null).toList())
+				neighbours.add(statement.getObject().asResource());
 
-		for (Statement statement : model.listStatements(resource, property, (RDFNode) null).toList())
-			neighbours.add(statement.getObject().asResource());
-		for (Statement statement : model.listStatements((Resource) null, property, resource).toList())
-			neighbours.add(statement.getSubject());
+		// Add incoming relations
+		if (direction.equals(Direction.IN) || direction.equals(Direction.BOTH))
+			for (Statement statement : model.listStatements((Resource) null, property, resource).toList())
+				neighbours.add(statement.getSubject());
 
 		return neighbours;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * nl.vu.qa_for_lod.graph.Graph#containsEdge(com.hp.hpl.jena.rdf.model.Resource
-	 * , com.hp.hpl.jena.rdf.model.Resource)
-	 */
-	public boolean containsEdge(Resource fromResource, Resource toResource, boolean directed) {
-		boolean connected = model.listStatements(fromResource, (Property) null, toResource).toList().size() > 0;
-		// If we ignore the direction and from->to doesn't work, try the inverse
-		if (!directed && !connected)
-			connected = model.listStatements(toResource, (Property) null, fromResource).toList().size() > 0;
-		return connected;
 	}
 
 }

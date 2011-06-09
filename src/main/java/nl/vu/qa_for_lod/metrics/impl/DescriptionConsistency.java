@@ -23,6 +23,18 @@ public class DescriptionConsistency implements Metric {
 	/*
 	 * (non-Javadoc)
 	 * 
+	 * @see
+	 * nl.vu.qa_for_lod.metrics.Metric#getDistanceToIdeal(nl.vu.qa_for_lod.metrics
+	 * .Distribution)
+	 */
+	public double getDistanceToIdeal(Distribution inputDistribution) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see nl.vu.qa_for_lod.metrics.Metric#getName()
 	 */
 	public String getName() {
@@ -37,17 +49,7 @@ public class DescriptionConsistency implements Metric {
 	 * com.hp.hpl.jena.rdf.model.Resource)
 	 */
 	public double getResult(Graph graph, Resource resource) {
+		// TODO Auto-generated method stub
 		return 0;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * nl.vu.qa_for_lod.metrics.Metric#getIdealDistribution(nl.vu.qa_for_lod
-	 * .metrics.Distribution)
-	 */
-	public Distribution getIdealDistribution(Distribution distribution) {
-		return null;
 	}
 }

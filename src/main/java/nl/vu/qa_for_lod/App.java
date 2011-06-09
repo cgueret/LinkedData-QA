@@ -7,9 +7,13 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import nl.vu.qa_for_lod.graph.impl.FileDataProvider;
+import nl.vu.qa_for_lod.metrics.Metric;
+import nl.vu.qa_for_lod.metrics.MetricState;
+import nl.vu.qa_for_lod.metrics.impl.Centrality;
 import nl.vu.qa_for_lod.metrics.impl.ClusteringCoefficient;
 import nl.vu.qa_for_lod.metrics.impl.Degree;
 import nl.vu.qa_for_lod.metrics.impl.SameAsChains;
+import nl.vu.qa_for_lod.report.DistributionsTable;
 import nl.vu.qa_for_lod.report.HTMLReport;
 
 import org.apache.commons.cli.CommandLine;
@@ -33,64 +37,6 @@ import com.hp.hpl.jena.rdf.model.ResourceFactory;
 // they are suspicious)
 public class App {
 	static Logger logger = LoggerFactory.getLogger(App.class);
-	private final FileDataProvider extraTriples;
-	private final MetricsExecutor metrics;
-
-	/**
-	 * @param dataFileName
-	 * @param reportFileName
-	 * @throws Exception
-	 */
-	public App(String dataFileName) throws Exception {
-		// Check if the file exists
-		File file = new File(dataFileName);
-		if (!file.exists())
-			throw new FileNotFoundException(dataFileName + " can not be found");
-
-		// Load the graph file
-		extraTriples = new FileDataProvider(dataFileName);
-		logger.info(String.format("Loaded %d triples from %s", extraTriples.size(), dataFileName));
-
-		// Initialise the metrics pipeline
-		metrics = new MetricsExecutor(extraTriples);
-		metrics.addMetric(new Degree());
-		metrics.addMetric(new ClusteringCoefficient());
-		metrics.addMetric(new SameAsChains());
-	}
-
-	/**
-	 * @param reportFileName
-	 * @throws Exception
-	 */
-	private void process(String reportFileName, boolean withGUI) throws Exception {
-		// Run all the metrics
-		metrics.processQueue(withGUI);
-
-		// Generate the analysis report
-		logger.info("Save execution report in " + reportFileName);
-		HTMLReport report = HTMLReport.createReport(reportFileName, metrics, extraTriples);
-		report.writeTo(reportFileName);
-	}
-
-	/**
-	 * 
-	 */
-	private void loadDefaultResourcesQueue() {
-		for (Resource resource : extraTriples.getResources())
-			metrics.addToResourcesQueue(resource);
-	}
-
-	/**
-	 * @param resourcesFileName
-	 * @throws IOException
-	 */
-	private void loadResourcesQueue(String resourcesFileName) throws IOException {
-		BufferedReader reader = new BufferedReader(new FileReader(resourcesFileName));
-		for (String line = reader.readLine(); line != null; line = reader.readLine())
-			if (!line.startsWith("#"))
-				metrics.addToResourcesQueue(ResourceFactory.createResource(line));
-	}
-
 	/**
 	 * @param args
 	 * @throws Exception
@@ -141,7 +87,7 @@ public class App {
 
 		// Use a GUI ?
 		boolean withGUI = !(cmd.hasOption("nogui"));
-		
+
 		// Create, init and run the app
 		App app = new App(dataFileName);
 		if (resourcesFileName != null)
@@ -151,5 +97,74 @@ public class App {
 
 		app.process(reportFileName, withGUI);
 		System.exit(0);
+	}
+	private final FileDataProvider extraTriples;
+
+	private final MetricsExecutor metrics;
+
+	/**
+	 * @param dataFileName
+	 * @param reportFileName
+	 * @throws Exception
+	 */
+	public App(String dataFileName) throws Exception {
+		// Check if the file exists
+		File file = new File(dataFileName);
+		if (!file.exists())
+			throw new FileNotFoundException(dataFileName + " can not be found");
+
+		// Load the graph file
+		extraTriples = new FileDataProvider(dataFileName);
+		logger.info(String.format("Loaded %d triples from %s", extraTriples.size(), dataFileName));
+
+		// Initialise the metrics pipeline
+		metrics = new MetricsExecutor(extraTriples);
+		metrics.addMetric(new Degree());
+		metrics.addMetric(new ClusteringCoefficient());
+		metrics.addMetric(new SameAsChains());
+		metrics.addMetric(new Centrality());
+	}
+
+	/**
+	 * 
+	 */
+	private void loadDefaultResourcesQueue() {
+		for (Resource resource : extraTriples.getResources())
+			metrics.addToResourcesQueue(resource);
+	}
+
+	/**
+	 * @param resourcesFileName
+	 * @throws IOException
+	 */
+	private void loadResourcesQueue(String resourcesFileName) throws IOException {
+		BufferedReader reader = new BufferedReader(new FileReader(resourcesFileName));
+		for (String line = reader.readLine(); line != null; line = reader.readLine())
+			if (!line.startsWith("#"))
+				metrics.addToResourcesQueue(ResourceFactory.createResource(line));
+	}
+
+	/**
+	 * @param reportFileName
+	 * @throws Exception
+	 */
+	private void process(String reportFileName, boolean withGUI) throws Exception {
+		// Run all the metrics
+		metrics.processQueue(withGUI);
+
+		// Generate the analysis report
+		logger.info("Save execution report in " + reportFileName);
+		HTMLReport report = HTMLReport.createReport(reportFileName, metrics, extraTriples);
+		report.writeTo(reportFileName);
+
+		// Save the distributions
+		logger.info("Save distributions");
+		for (Metric metric : metrics.getMetrics()) {
+			String fileName = metric.getName().replace(" ", "_") + ".dat";
+			DistributionsTable table = new DistributionsTable();
+			table.insert(metrics.getMetricData(metric).getDistribution(MetricState.BEFORE), "before");
+			table.insert(metrics.getMetricData(metric).getDistribution(MetricState.AFTER), "after");
+			table.write(fileName);
+		}
 	}
 }

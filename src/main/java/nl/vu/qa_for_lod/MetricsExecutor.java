@@ -24,7 +24,7 @@ import nl.vu.qa_for_lod.graph.impl.Any23DataProvider;
 import nl.vu.qa_for_lod.metrics.Distribution;
 import nl.vu.qa_for_lod.metrics.Metric;
 import nl.vu.qa_for_lod.metrics.MetricData;
-import nl.vu.qa_for_lod.report.MetricState;
+import nl.vu.qa_for_lod.metrics.MetricState;
 
 /**
  * @author Christophe Guéret <christophe.gueret@gmail.com>
@@ -32,12 +32,18 @@ import nl.vu.qa_for_lod.report.MetricState;
  */
 // http://wiki.gephi.org/index.php/Toolkit_portal
 public class MetricsExecutor {
+	class MetricSorter implements Comparator<Metric> {
+		public int compare(Metric o1, Metric o2) {
+			return o1.getName().compareTo(o2.getName());
+		}
+	}
 	static Logger logger = LoggerFactory.getLogger(MetricsExecutor.class);
-	private final Map<Metric, MetricData> metricsData = new HashMap<Metric, MetricData>();
-	private final List<Resource> resourceQueue = new ArrayList<Resource>();
-	private final DataProvider extraTriples;
 	private JProgressBar bar;
+	private final DataProvider extraTriples;
 	private JFrame frame;
+	private final Map<Metric, MetricData> metricsData = new HashMap<Metric, MetricData>();
+
+	private final List<Resource> resourceQueue = new ArrayList<Resource>();
 
 	/**
 	 * @param extraTriples
@@ -62,6 +68,27 @@ public class MetricsExecutor {
 	 */
 	public void addToResourcesQueue(Resource resource) {
 		resourceQueue.add(resource);
+	}
+
+	/*
+	 * public void incrementBar() { synchronized (bar) { int v = bar.getValue();
+	 * bar.setValue(v + 1); bar.invalidate(); } }
+	 */
+
+	/**
+	 * @return
+	 */
+	public MetricData getMetricData(Metric metric) {
+		return metricsData.get(metric);
+	}
+
+	/**
+	 * @return
+	 */
+	public Set<Metric> getMetrics() {
+		Set<Metric> sortedKeys = new TreeSet<Metric>(new MetricSorter());
+		sortedKeys.addAll(metricsData.keySet());
+		return sortedKeys;
 	}
 
 	/**
@@ -104,12 +131,10 @@ public class MetricsExecutor {
 		for (Metric metric : this.getMetrics()) {
 			MetricData data = metricsData.get(metric);
 			for (MetricState state : MetricState.values()) {
-				// Get the distributions
-				Distribution observedDistribution = data.getDistribution(state);
-				Distribution idealDistribution = metric.getIdealDistribution(observedDistribution);
-
 				// Ask the metric the distance to the ideal value
-				data.setDistanceToIdeal(state, observedDistribution.distanceTo(idealDistribution));
+				Distribution observedDistribution = data.getDistribution(state);
+				double dist = metric.getDistanceToIdeal(observedDistribution);
+				data.setDistanceToIdeal(state, dist);
 			}
 		}
 
@@ -120,35 +145,8 @@ public class MetricsExecutor {
 		logger.info("Done!");
 	}
 
-	/*
-	 * public void incrementBar() { synchronized (bar) { int v = bar.getValue();
-	 * bar.setValue(v + 1); bar.invalidate(); } }
-	 */
-
-	/**
-	 * @return
-	 */
-	public Set<Metric> getMetrics() {
-		Set<Metric> sortedKeys = new TreeSet<Metric>(new MetricSorter());
-		sortedKeys.addAll(metricsData.keySet());
-		return sortedKeys;
-	}
-
 	public int queueSize() {
 		return resourceQueue.size();
-	}
-
-	/**
-	 * @return
-	 */
-	public MetricData getMetricData(Metric metric) {
-		return metricsData.get(metric);
-	}
-
-	class MetricSorter implements Comparator<Metric> {
-		public int compare(Metric o1, Metric o2) {
-			return o1.getName().compareTo(o2.getName());
-		}
 	}
 }
 
