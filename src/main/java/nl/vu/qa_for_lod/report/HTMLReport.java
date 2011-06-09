@@ -165,14 +165,14 @@ public class HTMLReport {
 		buffer.append("<table><tr>");
 		buffer.append("<th>Metric name</th>");
 		buffer.append("<th>Status</th>");
-		buffer.append("<th>Improvement</th>");
+		buffer.append("<th>Distance change</th>");
 		buffer.append("</tr>");
 		for (Metric metric : executor.getMetrics()) {
 			MetricData data = executor.getMetricData(metric);
 			buffer.append("<tr>");
 			buffer.append("<td>").append(metric.getName()).append("</td>");
 			buffer.append("<td>").append(data.isGreen() ? "green " : "red ").append("</td>");
-			buffer.append("<td>").append(df.format(100 - data.getRatioDistanceChange())).append("</td>");
+			buffer.append("<td>").append(df.format(data.getRatioDistanceChange() - 100)).append(" %</td>");
 			buffer.append("</tr>");
 		}
 		buffer.append("</table>");

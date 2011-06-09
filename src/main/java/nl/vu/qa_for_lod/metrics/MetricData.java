@@ -23,17 +23,19 @@ import com.hp.hpl.jena.rdf.model.Resource;
  * 
  */
 public class MetricData {
-	protected static final Logger logger = LoggerFactory.getLogger(MetricData.class);
+	static final Logger logger = LoggerFactory.getLogger(MetricData.class);
+
 	/** Distance to ideal value */
 	private Map<MetricState, Double> distanceMap = new HashMap<MetricState, Double>();
 
 	/** Distribution of the results */
 	private Map<MetricState, Distribution> distributionMap = new HashMap<MetricState, Distribution>();
 
-	private ReentrantLock lock = new ReentrantLock(false);
-
 	/** Raw results mapping every node to a value */
 	private Map<MetricState, Results> resultsMap = new HashMap<MetricState, Results>();
+
+	/** Concurrent access lock */
+	private ReentrantLock lock = new ReentrantLock(false);
 
 	/**
 	 * 
@@ -63,6 +65,7 @@ public class MetricData {
 	public double getRatioDistanceChange() {
 		if (distanceMap.get(MetricState.BEFORE) == 0)
 			return 0;
+
 		return 100 * (distanceMap.get(MetricState.AFTER) / distanceMap.get(MetricState.BEFORE));
 	}
 

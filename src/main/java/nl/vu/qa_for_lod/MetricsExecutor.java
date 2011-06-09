@@ -7,6 +7,7 @@ import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,6 +38,7 @@ public class MetricsExecutor {
 			return o1.getName().compareTo(o2.getName());
 		}
 	}
+
 	static Logger logger = LoggerFactory.getLogger(MetricsExecutor.class);
 	private JProgressBar bar;
 	private final DataProvider extraTriples;
@@ -95,11 +97,11 @@ public class MetricsExecutor {
 	 * @throws Exception
 	 * 
 	 */
-	public void processQueue(boolean withGUI) throws Exception {
+	public void processQueue(boolean withGUI, String cacheDir) throws Exception {
 		logger.info("Start processing " + resourceQueue.size() + " resources");
 
 		// Create a data fetcher to de-reference resources
-		DataProvider dataFetcher = new Any23DataProvider();
+		DataProvider dataFetcher = new Any23DataProvider(cacheDir);
 
 		if (withGUI) {
 			frame = new JFrame("Progress");
@@ -126,6 +128,16 @@ public class MetricsExecutor {
 			}
 		}
 
+		// Remove all metrics that returned no result
+		Set<Metric> notApplicable = new HashSet<Metric>();
+		for (Metric metric : this.getMetrics()) {
+			MetricData data = metricsData.get(metric);
+			if (data.getDistribution(MetricState.BEFORE).equals(data.getDistribution(MetricState.AFTER)))
+					notApplicable.add(metric);
+		}
+		for (Metric metric : notApplicable)
+			metricsData.remove(metric);
+		
 		// Do the post processing
 		logger.info("Start post-processing");
 		for (Metric metric : this.getMetrics()) {

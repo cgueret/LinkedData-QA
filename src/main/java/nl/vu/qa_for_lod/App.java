@@ -12,6 +12,7 @@ import nl.vu.qa_for_lod.metrics.MetricState;
 import nl.vu.qa_for_lod.metrics.impl.Centrality;
 import nl.vu.qa_for_lod.metrics.impl.ClusteringCoefficient;
 import nl.vu.qa_for_lod.metrics.impl.Degree;
+import nl.vu.qa_for_lod.metrics.impl.Richness;
 import nl.vu.qa_for_lod.metrics.impl.SameAsChains;
 import nl.vu.qa_for_lod.report.DistributionsTable;
 import nl.vu.qa_for_lod.report.HTMLReport;
@@ -37,6 +38,7 @@ import com.hp.hpl.jena.rdf.model.ResourceFactory;
 // they are suspicious)
 public class App {
 	static Logger logger = LoggerFactory.getLogger(App.class);
+
 	/**
 	 * @param args
 	 * @throws Exception
@@ -85,19 +87,28 @@ public class App {
 		// Get resources file name
 		String resourcesFileName = cmd.getOptionValue("resources");
 
+		// Prepare caching dir
+		File cacheDir = new File("cache/");
+		if (!cacheDir.exists())
+			cacheDir.mkdirs();
+
 		// Use a GUI ?
 		boolean withGUI = !(cmd.hasOption("nogui"));
 
-		// Create, init and run the app
+		// Create and initialise the application
 		App app = new App(dataFileName);
 		if (resourcesFileName != null)
 			app.loadResourcesQueue(resourcesFileName);
 		else
 			app.loadDefaultResourcesQueue();
 
-		app.process(reportFileName, withGUI);
+		// Process the queue
+		File f = new File(dataFileName);
+		app.process(reportFileName, cacheDir + "/" + f.getName(), withGUI);
+
 		System.exit(0);
 	}
+
 	private final FileDataProvider extraTriples;
 
 	private final MetricsExecutor metrics;
@@ -123,6 +134,7 @@ public class App {
 		metrics.addMetric(new ClusteringCoefficient());
 		metrics.addMetric(new SameAsChains());
 		metrics.addMetric(new Centrality());
+		metrics.addMetric(new Richness());
 	}
 
 	/**
@@ -148,9 +160,9 @@ public class App {
 	 * @param reportFileName
 	 * @throws Exception
 	 */
-	private void process(String reportFileName, boolean withGUI) throws Exception {
+	private void process(String reportFileName, String cacheDir, boolean withGUI) throws Exception {
 		// Run all the metrics
-		metrics.processQueue(withGUI);
+		metrics.processQueue(withGUI, cacheDir);
 
 		// Generate the analysis report
 		logger.info("Save execution report in " + reportFileName);

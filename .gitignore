@@ -5,3 +5,9 @@
 /cache
 /tdb-cache
 /data-cache
+/Clustering_coefficient.dat
+/Degree.dat
+/Centrality.dat
+/Open_sameAs_chains.dat
+/report.html
+/log.txt

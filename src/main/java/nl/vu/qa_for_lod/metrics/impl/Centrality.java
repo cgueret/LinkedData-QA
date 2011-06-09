@@ -3,13 +3,16 @@
  */
 package nl.vu.qa_for_lod.metrics.impl;
 
-import java.util.Set;
+import java.util.Map.Entry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.hp.hpl.jena.rdf.model.Resource;
 
 import nl.vu.qa_for_lod.graph.Direction;
 import nl.vu.qa_for_lod.graph.Graph;
 import nl.vu.qa_for_lod.metrics.Distribution;
+import nl.vu.qa_for_lod.metrics.Distribution.DistributionAxis;
 import nl.vu.qa_for_lod.metrics.Metric;
 
 /**
@@ -17,7 +20,8 @@ import nl.vu.qa_for_lod.metrics.Metric;
  * 
  */
 public class Centrality implements Metric {
-
+	static final Logger logger = LoggerFactory.getLogger(Centrality.class);
+	
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -26,8 +30,18 @@ public class Centrality implements Metric {
 	 * .Distribution)
 	 */
 	public double getDistanceToIdeal(Distribution inputDistribution) {
+		// Get the highest centrality result found
+		double max = inputDistribution.max(DistributionAxis.X);
 
-		return 0;
+		// Compute the centrality index
+		double index = 0;
+		double size = 0;
+		for (Entry<Double, Double> entry : inputDistribution.entrySet()) {
+			size += entry.getValue();
+			index += entry.getValue() * (max - entry.getKey());
+		}
+
+		return (size > 1 ? index / (size - 1) : 0);
 	}
 
 	/*

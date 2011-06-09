@@ -17,19 +17,23 @@ import java.util.TreeSet;
 
 import org.apache.commons.math.stat.descriptive.moment.Mean;
 import org.apache.commons.math.stat.descriptive.moment.StandardDeviation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Christophe Guéret <christophe.gueret@gmail.com>
  * 
  */
 public class Distribution {
+	static final Logger logger = LoggerFactory.getLogger(Distribution.class);
+
 	public static enum DistributionAxis {
 		X, Y
 	}
 
+	private final Map<Double, Double> data = new HashMap<Double, Double>();
 	// FIXME Ugly trick to round the numbers
 	private final static DecimalFormat df = new DecimalFormat("######.##");
-	private final Map<Double, Double> data = new HashMap<Double, Double>();
 
 	/**
 	 * Compute the distance between the two distributions
@@ -48,9 +52,9 @@ public class Distribution {
 
 		// Measure the distance to that line
 		double d = 0;
-		for (Double key : keys)
+		for (Double key : keys) 
 			d += Math.abs(this.get(key) - other.get(key));
-
+		
 		return d;
 	}
 
@@ -164,6 +168,41 @@ public class Distribution {
 	public void set(double x, double value) {
 		Double key = Double.valueOf(df.format(x));
 		data.put(key, value);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#hashCode()
+	 */
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((data == null) ? 0 : data.hashCode());
+		return result;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#equals(java.lang.Object)
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Distribution other = (Distribution) obj;
+		if (data == null) {
+			if (other.data != null)
+				return false;
+		} else if (!data.equals(other.data))
+			return false;
+		return true;
 	}
 
 	/**

@@ -90,15 +90,17 @@ public class Any23DataProvider implements DataProvider {
 	private final static Any23 runner = new Any23();
 	private final Property HAS_BLACK_LISTED = ResourceFactory.createProperty("http://example.org/blacklisted");
 	private final ReentrantLock lock = new ReentrantLock(false);
-	private final Model model = TDBFactory.createModel("data-cache");
+	private final Model model;
 	private final Set<Resource> tempBlackList = new HashSet<Resource>();
 
 	private final Resource THIS = ResourceFactory.createResource("http://example.org/this");
 
 	/**
+	 * @param cacheDir 
 	 * 
 	 */
-	public Any23DataProvider() {
+	public Any23DataProvider(String cacheDir) {
+		model = TDBFactory.createModel(cacheDir);
 		runner.setHTTPUserAgent("LATC QA tool prototype");
 		// model.removeAll(THIS, HAS_BLACK_LISTED, (RDFNode)null);
 	}

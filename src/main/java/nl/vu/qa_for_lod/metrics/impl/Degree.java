@@ -5,6 +5,9 @@ package nl.vu.qa_for_lod.metrics.impl;
 
 import java.util.Map.Entry;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.hp.hpl.jena.rdf.model.Resource;
 
 import nl.vu.qa_for_lod.graph.Graph;
@@ -23,6 +26,8 @@ import nl.vu.qa_for_lod.misc.PolynomialFitter.Polynomial;
  * @author Christophe Guéret <christophe.gueret@gmail.com>
  */
 public class Degree implements Metric {
+	static final Logger logger = LoggerFactory.getLogger(Degree.class);
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -42,7 +47,7 @@ public class Degree implements Metric {
 		// distribution
 		Distribution idealDistribution = new Distribution();
 		for (Double key : inputDistribution.keySet())
-			idealDistribution.set(key, Math.exp(p.getY(Math.log(key))));
+			idealDistribution.set(key, (key.equals(0.0d) ? 0d : Math.exp(p.getY(Math.log(key)))));
 
 		// Return the distance between the two curves
 		return inputDistribution.distanceTo(idealDistribution);
