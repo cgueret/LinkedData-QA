@@ -104,7 +104,7 @@ public class HTMLReport {
 			// Generate the chart
 			try {
 				GChart chart = getChart(metric.getName(), observedDistributionBefore, observedDistributionAfter);
-				buffer.append("<img style=\"float:left\" src=\"").append(chart.toURLForHTML()).append("\"/>");
+				buffer.append("<img style=\"float:left;padding:5px;margin:5px\" src=\"").append(chart.toURLForHTML()).append("\"/>");
 			} catch (IllegalArgumentException e) {
 
 			}

@@ -78,11 +78,12 @@ public class App {
 			formatter.printHelp(App.class.getName(), options);
 			System.exit(-1);
 		}
+		File f = new File(dataFileName);
 
 		// Get report name
 		String reportFileName = cmd.getOptionValue("report");
 		if (reportFileName == null)
-			reportFileName = "report.html";
+			reportFileName = "report_" + f.getName().replace(".","_") + ".html";
 
 		// Get resources file name
 		String resourcesFileName = cmd.getOptionValue("resources");
@@ -103,7 +104,6 @@ public class App {
 			app.loadDefaultResourcesQueue();
 
 		// Process the queue
-		File f = new File(dataFileName);
 		app.process(reportFileName, cacheDir + "/" + f.getName(), withGUI);
 
 		System.exit(0);
