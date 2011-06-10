@@ -3,14 +3,20 @@
  */
 package nl.vu.qa_for_lod.graph.impl;
 
+import java.io.IOException;
+import java.net.SocketTimeoutException;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
 import org.deri.any23.Any23;
+import org.deri.any23.Configuration;
 import org.deri.any23.extractor.ExtractionContext;
+import org.deri.any23.extractor.ExtractionException;
 import org.deri.any23.http.HTTPClient;
 import org.deri.any23.source.DocumentSource;
 import org.deri.any23.source.HTTPDocumentSource;
@@ -34,6 +40,9 @@ import nl.vu.qa_for_lod.graph.DataProvider;
  * 
  */
 public class Any23DataProvider implements DataProvider {
+	// List of time to wait, in second, before trying a resource again
+	private final int[] RETRY_DELAY = { 1, 5, 10 };
+
 	protected class MyHandler implements TripleHandler {
 		private final List<Statement> buffer = new ArrayList<Statement>();
 		private final Resource resource;
@@ -87,13 +96,11 @@ public class Any23DataProvider implements DataProvider {
 	}
 
 	private final static Logger logger = LoggerFactory.getLogger(Any23DataProvider.class);
-	private final static Any23 runner = new Any23();
-	private final Property HAS_BLACK_LISTED = ResourceFactory.createProperty("http://example.org/blacklisted");
+	private final static Resource THIS = ResourceFactory.createResource("http://example.org/this");
+	private final static Property HAS_BLACK_LISTED = ResourceFactory.createProperty("http://example.org/blacklisted");
+	private final Any23 runner = new Any23();
 	private final ReentrantLock lock = new ReentrantLock(false);
 	private final Model model;
-	private final Set<Resource> tempBlackList = new HashSet<Resource>();
-
-	private final Resource THIS = ResourceFactory.createResource("http://example.org/this");
 
 	/**
 	 * @param cacheDir
@@ -124,30 +131,62 @@ public class Any23DataProvider implements DataProvider {
 	 * )
 	 */
 	public Set<Statement> get(Resource resource) {
+		// Try to get the content from the cache
 		lock.lock();
 		Set<Statement> stmts = model.listStatements(resource, (Property) null, (RDFNode) null).toSet();
 		boolean blackListed = model.contains(THIS, HAS_BLACK_LISTED, resource);
 		lock.unlock();
-		if (stmts.size() == 0 && !blackListed && !tempBlackList.contains(resource)) {
-			boolean failed = false;
-			try {
-				HTTPClient httpClient = runner.getHTTPClient();
-				DocumentSource source = new HTTPDocumentSource(httpClient, resource.getURI());
-				TripleHandler handler = new MyHandler(resource);
-				runner.extract(source, handler);
-			} catch (Exception e) {
-				logger.warn("Failed to load " + resource.getURI());
-				failed = true;
-				tempBlackList.add(resource);
+
+		// If we don't have anything and the resource is not blacklisted,
+		// download it
+		if (stmts.size() == 0 && !blackListed) {
+			// Try to download the resource
+			boolean failed = true;
+			int retryCount = 0;
+			while (failed && retryCount < RETRY_DELAY.length) {
+				try {
+					HTTPClient httpClient = runner.getHTTPClient();
+					DocumentSource source = new HTTPDocumentSource(httpClient, resource.getURI());
+					TripleHandler handler = new MyHandler(resource);
+					runner.extract(source, handler);
+					failed = false;
+				} catch (SocketTimeoutException e) {
+					logger.warn("Time out for " + resource.getURI() + ", retry in " + RETRY_DELAY[retryCount]
+							+ " seconds");
+					retryCount++;
+					if (retryCount < RETRY_DELAY.length) {
+						try {
+							Thread.sleep(RETRY_DELAY[retryCount] * 1000);
+						} catch (InterruptedException e1) {
+							e1.printStackTrace();
+						}
+					}
+				} catch (IOException e) {
+					// 404 or alike, not worth trying again
+					failed = false;
+				} catch (URISyntaxException e) {
+					// Error in URI, unlikely to change
+					failed = false;
+				} catch (ExtractionException e) {
+					// Something is wrong with the data, give up
+					failed = false;
+				} catch (NullPointerException e) {
+					// What?! Ok, just give up anyway
+					failed = false;
+				}
 			}
+
+			// If it's still failed, blacklist. Otherwise, save the data
 			lock.lock();
-			stmts = model.listStatements(resource, (Property) null, (RDFNode) null).toSet();
-			if (stmts.size() == 0 && !failed)
+			if (failed) {
 				model.add(THIS, HAS_BLACK_LISTED, resource);
+				logger.warn("Added " + resource.getURI() + " to the black list");
+			} else {
+				stmts = model.listStatements(resource, (Property) null, (RDFNode) null).toSet();
+			}
 			lock.unlock();
 		}
 
 		return stmts;
 	}
-
 }
