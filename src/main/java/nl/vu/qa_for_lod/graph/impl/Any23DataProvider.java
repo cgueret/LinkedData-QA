@@ -6,8 +6,7 @@ package nl.vu.qa_for_lod.graph.impl;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -41,7 +40,7 @@ public class Any23DataProvider implements DataProvider {
 	private final int[] RETRY_DELAY = { 1, 5, 10 };
 
 	protected class MyHandler implements TripleHandler {
-		private final List<Statement> buffer = new ArrayList<Statement>();
+		private final Set<Statement> buffer = new HashSet<Statement>();
 		private final Resource resource;
 
 		/**
@@ -59,10 +58,6 @@ public class Any23DataProvider implements DataProvider {
 		}
 
 		public void endDocument(org.openrdf.model.URI documentURI) throws TripleHandlerException {
-			lock.lock();
-			model.add(buffer);
-			model.commit();
-			lock.unlock();
 		}
 
 		public void openContext(ExtractionContext context) throws TripleHandlerException {
@@ -88,6 +83,10 @@ public class Any23DataProvider implements DataProvider {
 		}
 
 		public void startDocument(org.openrdf.model.URI documentURI) throws TripleHandlerException {
+		}
+
+		public Set<Statement> getBuffer() {
+			return buffer;
 		}
 
 	}
@@ -138,52 +137,66 @@ public class Any23DataProvider implements DataProvider {
 		// download it
 		if (stmts.size() == 0 && !blackListed) {
 			// Try to download the resource
-			boolean failed = true;
+			boolean retry = true;
 			int retryCount = 0;
-			while (failed && retryCount < RETRY_DELAY.length) {
+			while (retry) {
+				// Be optimistic
+				retry = false;
+
 				try {
+					// Get the data
 					HTTPClient httpClient = runner.getHTTPClient();
 					DocumentSource source = new HTTPDocumentSource(httpClient, resource.getURI());
-					TripleHandler handler = new MyHandler(resource);
+					MyHandler handler = new MyHandler(resource);
 					runner.extract(source, handler);
-					failed = false;
+					stmts = handler.getBuffer();
+
+					// Save the data
+					lock.lock();
+					model.add((Statement[]) stmts.toArray());
+					lock.unlock();
 				} catch (SocketTimeoutException e) {
-					logger.warn("Time out for " + resource.getURI() + ", retry in " + RETRY_DELAY[retryCount]
-							+ " seconds");
-					retryCount++;
 					if (retryCount < RETRY_DELAY.length) {
+						// Sleep and retry
+						logger.warn("Time out for " + resource.getURI() + ", retry in " + RETRY_DELAY[retryCount]
+								+ " seconds");
 						try {
 							Thread.sleep(RETRY_DELAY[retryCount] * 1000);
 						} catch (InterruptedException e1) {
 							e1.printStackTrace();
 						}
+						retry = true;
+						retryCount++;
+					} else {
+						// Black list
+						blackList(resource);
 					}
 				} catch (IOException e) {
 					// 404 or alike, not worth trying again
-					failed = false;
+					blackList(resource);
 				} catch (URISyntaxException e) {
 					// Error in URI, unlikely to change
-					failed = false;
+					blackList(resource);
 				} catch (ExtractionException e) {
 					// Something is wrong with the data, give up
-					failed = false;
+					blackList(resource);
 				} catch (Exception e) {
 					// What?! Ok, just give up anyway
-					failed = false;
+					blackList(resource);
 				}
 			}
-
-			// If it's still failed, blacklist. Otherwise, save the data
-			lock.lock();
-			if (failed) {
-				model.add(THIS, HAS_BLACK_LISTED, resource);
-				logger.warn("Added " + resource.getURI() + " to the black list");
-			} else {
-				stmts = model.listStatements(resource, (Property) null, (RDFNode) null).toSet();
-			}
-			lock.unlock();
 		}
 
 		return stmts;
+	}
+
+	/**
+	 * @param resource
+	 */
+	private void blackList(Resource resource) {
+		lock.lock();
+		model.add(THIS, HAS_BLACK_LISTED, resource);
+		logger.warn("Added " + resource.getURI() + " to the black list");
+		lock.unlock();
 	}
 }
