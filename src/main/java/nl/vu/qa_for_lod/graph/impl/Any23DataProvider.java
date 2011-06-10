@@ -6,7 +6,6 @@ package nl.vu.qa_for_lod.graph.impl;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.URISyntaxException;
-import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
