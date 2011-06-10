@@ -105,7 +105,7 @@ public class Any23DataProvider implements DataProvider {
 	public Any23DataProvider(String cacheDir) {
 		model = TDBFactory.createModel(cacheDir);
 		runner.setHTTPUserAgent("LATC QA tool prototype");
-		// model.removeAll(THIS, HAS_BLACK_LISTED, (RDFNode)null);
+		//model.removeAll(THIS, HAS_BLACK_LISTED, (RDFNode)null);
 	}
 
 	/*
@@ -153,7 +153,9 @@ public class Any23DataProvider implements DataProvider {
 
 					// Save the data
 					lock.lock();
-					model.add((Statement[]) stmts.toArray());
+					for (Statement stmt : stmts)
+						model.add(stmt);
+					model.commit();
 					lock.unlock();
 				} catch (SocketTimeoutException e) {
 					if (retryCount < RETRY_DELAY.length) {
@@ -169,19 +171,25 @@ public class Any23DataProvider implements DataProvider {
 						retryCount++;
 					} else {
 						// Black list
+						logger.warn("out");
 						blackList(resource);
 					}
 				} catch (IOException e) {
 					// 404 or alike, not worth trying again
+					logger.warn("io");
 					blackList(resource);
 				} catch (URISyntaxException e) {
 					// Error in URI, unlikely to change
+					logger.warn("u");
 					blackList(resource);
 				} catch (ExtractionException e) {
 					// Something is wrong with the data, give up
+					logger.warn("e");
 					blackList(resource);
 				} catch (Exception e) {
 					// What?! Ok, just give up anyway
+					logger.warn("?");
+					e.printStackTrace();
 					blackList(resource);
 				}
 			}
