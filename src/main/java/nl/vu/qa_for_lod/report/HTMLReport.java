@@ -136,7 +136,7 @@ public class HTMLReport {
 		double max = executor.getMetrics().size() * scores.size() * 1.0d;
 
 		// Insert the HTML code
-		buffer.append("<h1>Most suspicious nodes</h1>");
+		buffer.append("<h1>Outliers</h1>");
 		buffer.append("<table><tr>");
 		buffer.append("<th>Score</th>");
 		buffer.append("<th>Resource</th>");

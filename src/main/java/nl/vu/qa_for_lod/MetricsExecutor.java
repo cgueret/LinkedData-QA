@@ -12,6 +12,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.JFrame;
 import javax.swing.JProgressBar;
@@ -21,7 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import com.hp.hpl.jena.rdf.model.Resource;
 import nl.vu.qa_for_lod.graph.DataProvider;
-import nl.vu.qa_for_lod.graph.impl.Any23DataProvider;
+import nl.vu.qa_for_lod.graph.impl.WoDDataProvider;
 import nl.vu.qa_for_lod.metrics.Distribution;
 import nl.vu.qa_for_lod.metrics.Metric;
 import nl.vu.qa_for_lod.metrics.MetricData;
@@ -41,10 +46,9 @@ public class MetricsExecutor {
 
 	static Logger logger = LoggerFactory.getLogger(MetricsExecutor.class);
 	private JProgressBar bar;
-	private final DataProvider extraTriples;
 	private JFrame frame;
+	private final DataProvider extraTriples;
 	private final Map<Metric, MetricData> metricsData = new HashMap<Metric, MetricData>();
-
 	private final List<Resource> resourceQueue = new ArrayList<Resource>();
 
 	/**
@@ -100,14 +104,17 @@ public class MetricsExecutor {
 	public void processQueue(boolean withGUI, String cacheDir) throws Exception {
 		logger.info("Start processing " + resourceQueue.size() + " resources");
 
-		// Create a data fetcher to de-reference resources
-		DataProvider dataFetcher = new Any23DataProvider(cacheDir);
+		// Create an executor service
+		ExecutorService executorService = Executors.newFixedThreadPool(6);
 
+		// Create a data fetcher to de-reference resources
+		DataProvider dataFetcher = new WoDDataProvider(cacheDir);
+
+		// Init the GUI if needed
 		if (withGUI) {
 			frame = new JFrame("Progress");
 			frame.setResizable(false);
 			frame.setPreferredSize(new Dimension(500, 32));
-
 			bar = new JProgressBar(0, resourceQueue.size());
 			bar.setStringPainted(true);
 			frame.getContentPane().add(bar);
@@ -118,13 +125,21 @@ public class MetricsExecutor {
 		}
 
 		// Do the processing
-		// FIXME The parallel code was not more efficient :(
+		List<Future<?>> futures = new ArrayList<Future<?>>();
 		for (Resource resource : resourceQueue) {
 			MetricsTask task = new MetricsTask(this, resource, dataFetcher, extraTriples);
-			task.run();
-			if (withGUI) {
-				bar.setValue(bar.getValue() + 1);
-				bar.invalidate();
+			Future<?> future = executorService.submit(task);
+			futures.add(future);
+		}
+
+		// Wait for all the tasks to be completed
+		for (Future<?> future : futures) {
+			try {
+				future.get();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			} catch (ExecutionException e) {
+				e.printStackTrace();
 			}
 		}
 
@@ -133,11 +148,11 @@ public class MetricsExecutor {
 		for (Metric metric : this.getMetrics()) {
 			MetricData data = metricsData.get(metric);
 			if (data.getDistribution(MetricState.BEFORE).equals(data.getDistribution(MetricState.AFTER)))
-					notApplicable.add(metric);
+				notApplicable.add(metric);
 		}
 		for (Metric metric : notApplicable)
 			metricsData.remove(metric);
-		
+
 		// Do the post processing
 		logger.info("Start post-processing");
 		for (Metric metric : this.getMetrics()) {
@@ -150,15 +165,28 @@ public class MetricsExecutor {
 			}
 		}
 
+		logger.info("Done!");
+
+		// Close the data fetcher
+		dataFetcher.close();
+
+		// Hide the progress bar
 		if (withGUI) {
 			frame.setVisible(false);
 		}
 
-		logger.info("Done!");
-	}
-
-	public int queueSize() {
-		return resourceQueue.size();
+		// Shutdown the executor
+		executorService.shutdown();
+		try {
+			if (!executorService.awaitTermination(60, TimeUnit.SECONDS)) {
+				executorService.shutdownNow();
+				if (!executorService.awaitTermination(60, TimeUnit.SECONDS))
+					System.err.println("Pool did not terminate");
+			}
+		} catch (InterruptedException ie) {
+			executorService.shutdownNow();
+			Thread.currentThread().interrupt();
+		}
 	}
 }
 
