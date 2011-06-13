@@ -1,0 +1,2 @@
+http://db0.aksw.org:8895/sparql
+http://db0.aksw.org:8895/sparql

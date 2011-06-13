@@ -1,0 +1,2 @@
+http://dbpedia.org/sparql
+http://160.45.137.69:8890/sparql

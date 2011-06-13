@@ -3,29 +3,16 @@
  */
 package nl.vu.qa_for_lod.graph.impl;
 
-import java.io.IOException;
-import java.net.SocketTimeoutException;
-import java.net.URISyntaxException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.deri.any23.Any23;
-import org.deri.any23.extractor.ExtractionContext;
-import org.deri.any23.extractor.ExtractionException;
-import org.deri.any23.http.HTTPClient;
-import org.deri.any23.source.DocumentSource;
-import org.deri.any23.source.HTTPDocumentSource;
-import org.deri.any23.writer.TripleHandler;
-import org.deri.any23.writer.TripleHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

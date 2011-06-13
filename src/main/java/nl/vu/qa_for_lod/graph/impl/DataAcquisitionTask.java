@@ -32,7 +32,6 @@ public class DataAcquisitionTask implements Callable<Boolean> {
 	// List of time to wait, in second, before trying a resource again
 	final static int[] RETRY_DELAY = { 1, 5, 10 };
 	// The runner from Any23
-	private final Any23 runner = new Any23();
 	private final Resource resource;
 	private final Set<Statement> statements = new HashSet<Statement>();
 	private final Model model;
@@ -42,8 +41,6 @@ public class DataAcquisitionTask implements Callable<Boolean> {
 	 * @param model
 	 */
 	public DataAcquisitionTask(Resource resource, Model model) {
-		if (runner.getHTTPUserAgent() == null)
-			runner.setHTTPUserAgent("LATC QA tool prototype");
 		this.resource = resource;
 		this.model = model;
 	}
@@ -63,12 +60,14 @@ public class DataAcquisitionTask implements Callable<Boolean> {
 
 			try {
 				// Get the data
+				Any23 runner = new Any23();
+				runner.setHTTPUserAgent("LATC QA tool prototype");
 				HTTPClient httpClient = runner.getHTTPClient();
 				DocumentSource source = new HTTPDocumentSource(httpClient, resource.getURI());
 				MyTripleHandler handler = new MyTripleHandler(resource, model);
 				runner.extract(source, handler);
 				statements.addAll(handler.getBuffer());
-
+				
 				// We were successful
 				return Boolean.TRUE;
 			} catch (SocketTimeoutException e) {

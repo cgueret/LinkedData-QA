@@ -1,0 +1,2 @@
+http://data.semanticweb.org/sparql
+http://semantic.ckan.net/sparql
