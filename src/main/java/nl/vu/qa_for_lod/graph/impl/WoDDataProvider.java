@@ -30,6 +30,7 @@ import nl.vu.qa_for_lod.graph.DataProvider;
  * @author Christophe Guéret <christophe.gueret@gmail.com>
  * 
  */
+// TODO Add implementation to query SPARQL end points before de-referencing
 public class WoDDataProvider implements DataProvider {
 	// Logger
 	final static Logger logger = LoggerFactory.getLogger(WoDDataProvider.class);
@@ -39,8 +40,9 @@ public class WoDDataProvider implements DataProvider {
 	final Lock queueLock = new ReentrantLock();
 	final Condition queueNotFull = queueLock.newCondition();
 	final static int MAX_QUEUED_TASK = 100;
-	final static Resource THIS = ResourceFactory.createResource("http://example.org/this");
-	final static Property HAS_BLACK_LISTED = ResourceFactory.createProperty("http://example.org/blacklisted");
+	final static Resource CACHE = ResourceFactory.createResource("http://example.org/cache");
+	final static Property CONTAINS = ResourceFactory.createProperty("http://example.org/contains");
+	final static Property FAILED_ON = ResourceFactory.createProperty("http://example.org/failed");
 	final Lock modelLock = new ReentrantLock();
 	final Model model;
 
@@ -75,15 +77,13 @@ public class WoDDataProvider implements DataProvider {
 		// Try to get the content from the cache
 		modelLock.lock();
 		try {
-			Set<Statement> stmts = model.listStatements(resource, (Property) null, (RDFNode) null).toSet();
-			boolean blackListed = model.contains(THIS, HAS_BLACK_LISTED, resource);
-			if (stmts.size() != 0 || blackListed)
-				return stmts;
+			if (model.contains(CACHE, CONTAINS, resource))
+				return model.listStatements(resource, (Property) null, (RDFNode) null).toSet();
 		} finally {
 			modelLock.unlock();
 		}
 
-		// Not blacklisted and still no info, try to get the content
+		// Not in the cache, try to get the content
 		DataAcquisitionTask futureTask = null;
 		queueLock.lock();
 		try {
@@ -118,16 +118,18 @@ public class WoDDataProvider implements DataProvider {
 			if (isSuccessful) {
 				// Save the data
 				modelLock.lock();
+				model.add(CACHE, CONTAINS, resource);
 				for (Statement stmt : futureTask.getStatements())
 					model.add(stmt);
-				model.commit();
+				// model.commit();
 				modelLock.unlock();
 				return futureTask.getStatements();
 			} else {
 				// Black list the resource
 				modelLock.lock();
-				model.add(THIS, HAS_BLACK_LISTED, resource);
-				logger.warn("Added " + resource.getURI() + " to the black list");
+				logger.warn("Failed getting data from" + resource.getURI());
+				model.add(CACHE, CONTAINS, resource);
+				model.add(CACHE, FAILED_ON, resource);
 				modelLock.unlock();
 			}
 		} catch (Exception e) {

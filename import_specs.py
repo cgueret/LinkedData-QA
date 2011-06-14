@@ -20,7 +20,6 @@ def process_directory(dir_in, dir_out):
             for source in tree.getroot().findall("DataSources/DataSource"):
                 file.write(source.findall("Param[@name=\"endpointURI\"]")[0].get("value") + "\n")
             file.close()
-    pass
 
 if __name__ == '__main__':
     process_directory(ROOT, OUT)
