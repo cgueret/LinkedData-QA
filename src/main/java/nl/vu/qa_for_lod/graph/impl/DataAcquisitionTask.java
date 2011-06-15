@@ -31,14 +31,12 @@ import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.Statement;
+import com.hp.hpl.jena.sparql.core.BasicPattern;
 import com.hp.hpl.jena.sparql.expr.E_IsURI;
-import com.hp.hpl.jena.sparql.expr.Expr;
-import com.hp.hpl.jena.sparql.expr.ExprFunction;
 import com.hp.hpl.jena.sparql.expr.ExprVar;
 import com.hp.hpl.jena.sparql.syntax.ElementFilter;
 import com.hp.hpl.jena.sparql.syntax.ElementGroup;
-import com.hp.hpl.jena.sparql.syntax.TemplateGroup;
-import com.hp.hpl.jena.sparql.syntax.TemplateTriple;
+import com.hp.hpl.jena.sparql.syntax.Template;
 
 /**
  * @author Christophe Guéret <christophe.gueret@gmail.com>
@@ -78,10 +76,12 @@ public class DataAcquisitionTask implements Callable<Boolean> {
 	public Boolean call() throws Exception {
 		boolean success = false;
 
-		// Until we are successfull, try every end point
+		// Until we are successful, try every end point
 		int endpointIndex = 0;
 		while (!success && endpointIndex != endPoints.size()) {
 			success = queryEndPoint(endPoints.get(endpointIndex));
+			if (success)
+				logger.info("Got results for " + resource + " from " + endPoints.get(endpointIndex));
 			endpointIndex++;
 		}
 
@@ -113,11 +113,11 @@ public class DataAcquisitionTask implements Callable<Boolean> {
 		ElementGroup group = new ElementGroup();
 		group.addTriplePattern(triple);
 		group.addElementFilter(new ElementFilter(new E_IsURI(new ExprVar(o))));
-		TemplateGroup g = new TemplateGroup();
-		g.add(new TemplateTriple(triple));
-		query.setConstructTemplate(g);
+		BasicPattern bgp = new BasicPattern();
+		bgp.add(triple);
+		query.setConstructTemplate(new Template(bgp));
 		query.setQueryPattern(group);
-
+		
 		// Execute and add the results
 		QueryExecution qExec = QueryExecutionFactory.sparqlService(serviceURI, query);
 		Set<Statement> stmts = qExec.execConstruct().listStatements().toSet();
