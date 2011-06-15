@@ -4,6 +4,7 @@
 package nl.vu.qa_for_lod.graph.impl;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +40,7 @@ public class WoDDataProvider implements DataProvider {
 	
 	// Stuff for the concurrent execution of data queries
 	final ExecutorService executor = Executors.newFixedThreadPool(2);
-	final Map<Resource, DataAcquisitionTask> queue = new ConcurrentHashMap<Resource, DataAcquisitionTask>();
+	final Map<Resource, DataAcquisitionTask> queue = new HashMap<Resource, DataAcquisitionTask>();
 	final Lock queueLock = new ReentrantLock();
 	final Condition queueNotFull = queueLock.newCondition();
 	final static int MAX_QUEUED_TASK = 100;
