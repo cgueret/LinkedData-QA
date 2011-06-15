@@ -40,6 +40,16 @@ public class App {
 	private final MetricsExecutor metrics;
 	private final WoDDataProvider dataFetcher;
 
+	private static final Options options = new Options();
+
+	
+	public static void printHelpAndExit(int exitCode)
+	{
+		HelpFormatter formatter = new HelpFormatter();
+		formatter.printHelp(App.class.getName(), options);		
+		System.exit(exitCode);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception
@@ -47,7 +57,6 @@ public class App {
 	@SuppressWarnings("static-access")
 	public static void main(String[] args) throws Exception {
 		// Build the options
-		Options options = new Options();
 		Option outDirOption = OptionBuilder.withArgName("directory").hasArg()
 				.withDescription("output directory for the results").create("out");
 		options.addOption(outDirOption);
@@ -69,19 +78,20 @@ public class App {
 
 		// Print help message
 		if (cmd.hasOption("h")) {
-			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp(App.class.getName(), options);
-			System.exit(0);
+			printHelpAndExit(0);
 		}
 
 		// Get the name of the data file
 		String triplesFilePath = cmd.getOptionValue("triples");
-		File triplesFile = new File(triplesFilePath);
-		if (triplesFilePath == null || !triplesFile.exists()) {
+		if (triplesFilePath == null) {
 			System.err.println("You must provide a valid set of triples");
-			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp(App.class.getName(), options);
-			System.exit(-1);
+			printHelpAndExit(-1);
+		}
+
+		File triplesFile = new File(triplesFilePath);
+		if (!triplesFile.exists()) {
+			System.err.println("The specified file '" + triplesFile.getAbsolutePath() + "' does not exist.");
+			printHelpAndExit(-1);
 		}
 		String triplesFileName = triplesFile.getName();
 
@@ -90,9 +100,7 @@ public class App {
 		File resourcesFile = (resourcesFileName == null ? null : new File(resourcesFileName));
 		if (resourcesFileName != null && !resourcesFile.exists()) {
 			System.err.println("Invalid resources file");
-			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp(App.class.getName(), options);
-			System.exit(-1);
+			printHelpAndExit(-1);
 		}
 
 		// Get resources file name
@@ -100,9 +108,7 @@ public class App {
 		File endpointsFile = (endpointsFileName == null ? null : new File(endpointsFileName));
 		if (endpointsFileName != null && !endpointsFile.exists()) {
 			System.err.println("Invalid endpoints file");
-			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp(App.class.getName(), options);
-			System.exit(-1);
+			printHelpAndExit(-1);
 		}
 
 		// Setup the output directory
