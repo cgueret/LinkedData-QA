@@ -3,7 +3,9 @@
  */
 package nl.vu.qa_for_lod.graph.impl;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,23 +36,37 @@ import nl.vu.qa_for_lod.graph.DataProvider;
 public class WoDDataProvider implements DataProvider {
 	// Logger
 	final static Logger logger = LoggerFactory.getLogger(WoDDataProvider.class);
+	
 	// Stuff for the concurrent execution of data queries
 	final ExecutorService executor = Executors.newFixedThreadPool(2);
 	final Map<Resource, DataAcquisitionTask> queue = new ConcurrentHashMap<Resource, DataAcquisitionTask>();
 	final Lock queueLock = new ReentrantLock();
 	final Condition queueNotFull = queueLock.newCondition();
 	final static int MAX_QUEUED_TASK = 100;
+	
+	// Jena-based caching
 	final static Resource CACHE = ResourceFactory.createResource("http://example.org/cache");
 	final static Property CONTAINS = ResourceFactory.createProperty("http://example.org/contains");
 	final static Property FAILED_ON = ResourceFactory.createProperty("http://example.org/failed");
 	final Lock modelLock = new ReentrantLock();
 	final Model model;
 
+	// List of end points
+	final List<String> endPoints = new ArrayList<String>();
+	
+	/**
+	 * @param endPointURI
+	 */
+	public void addEndPoint(String endPointURI) {
+		endPoints.add(endPointURI);
+	}
+
 	/**
 	 * @param cacheDir
 	 * 
 	 */
 	public WoDDataProvider(String cacheDir) {
+		logger.info("Initialise cache in " + cacheDir);
 		model = TDBFactory.createModel(cacheDir);
 		// model.removeAll(THIS, HAS_BLACK_LISTED, (RDFNode)null);
 	}
@@ -100,7 +116,7 @@ public class WoDDataProvider implements DataProvider {
 			// If there is none, create one
 			if (futureTask == null) {
 				// logger.info("Download data for " + resource);
-				futureTask = new DataAcquisitionTask(resource, model);
+				futureTask = new DataAcquisitionTask(endPoints, resource, model);
 				queue.put(resource, futureTask);
 				executor.submit(futureTask);
 			} else {
@@ -127,7 +143,7 @@ public class WoDDataProvider implements DataProvider {
 			} else {
 				// Black list the resource
 				modelLock.lock();
-				logger.warn("Failed getting data from" + resource.getURI());
+				logger.warn("Failed getting data from " + resource.getURI());
 				model.add(CACHE, CONTAINS, resource);
 				model.add(CACHE, FAILED_ON, resource);
 				modelLock.unlock();

@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import com.hp.hpl.jena.rdf.model.Resource;
 import nl.vu.qa_for_lod.graph.DataProvider;
-import nl.vu.qa_for_lod.graph.impl.WoDDataProvider;
+import nl.vu.qa_for_lod.graph.impl.FileDataProvider;
 import nl.vu.qa_for_lod.metrics.Distribution;
 import nl.vu.qa_for_lod.metrics.Metric;
 import nl.vu.qa_for_lod.metrics.MetricData;
@@ -50,11 +50,17 @@ public class MetricsExecutor {
 	private final DataProvider extraTriples;
 	private final Map<Metric, MetricData> metricsData = new HashMap<Metric, MetricData>();
 	private final List<Resource> resourceQueue = new ArrayList<Resource>();
+	private final DataProvider dataFetcher;
 
 	/**
+	 * @param dataFetcher
+	 *            the data provider used to get the description of the resources
 	 * @param extraTriples
+	 *            the data provider serving the extra set of triples for the
+	 *            comparative analysis
 	 */
-	public MetricsExecutor(DataProvider extraTriples) {
+	public MetricsExecutor(DataProvider dataFetcher, FileDataProvider extraTriples) {
+		this.dataFetcher = dataFetcher;
 		this.extraTriples = extraTriples;
 	}
 
@@ -101,14 +107,11 @@ public class MetricsExecutor {
 	 * @throws Exception
 	 * 
 	 */
-	public void processQueue(boolean withGUI, String cacheDir) throws Exception {
+	public void processQueue(boolean withGUI) throws Exception {
 		logger.info("Start processing " + resourceQueue.size() + " resources");
 
 		// Create an executor service
 		ExecutorService executorService = Executors.newFixedThreadPool(6);
-
-		// Create a data fetcher to de-reference resources
-		DataProvider dataFetcher = new WoDDataProvider(cacheDir);
 
 		// Init the GUI if needed
 		if (withGUI) {
@@ -167,8 +170,7 @@ public class MetricsExecutor {
 
 		logger.info("Done!");
 
-		// Close the data fetcher
-		dataFetcher.close();
+
 
 		// Hide the progress bar
 		if (withGUI) {

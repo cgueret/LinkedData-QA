@@ -9,6 +9,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.RDFReader;
@@ -24,6 +27,9 @@ import nl.vu.qa_for_lod.graph.DataProvider;
  * 
  */
 public class FileDataProvider implements DataProvider {
+	// Logger
+	final static Logger logger = LoggerFactory.getLogger(FileDataProvider.class);
+	// The set of statements 
 	private final Map<Resource, Set<Statement>> data = new HashMap<Resource, Set<Statement>>();
 
 	/**
@@ -48,7 +54,7 @@ public class FileDataProvider implements DataProvider {
 				index(stmt.getSubject(), stmt);
 		}
 		model.close();
-
+		logger.info(String.format("Loaded %d triples from %s", size(), fileName));
 	}
 
 	/*
