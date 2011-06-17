@@ -41,7 +41,7 @@ public interface Graph {
 	/**
 	 * @param resource
 	 * @param direction
-	 * @param propertyURI
+	 * @param property 
 	 * @return
 	 */
 	public Set<Resource> getNeighbours(Resource resource, Direction direction, Property property);

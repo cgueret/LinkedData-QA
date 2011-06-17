@@ -8,5 +8,12 @@ package nl.vu.qa_for_lod.metrics;
  * 
  */
 public enum MetricState {
-	AFTER, BEFORE
+	/**
+	 * 
+	 */
+	AFTER, 
+	/**
+	 * 
+	 */
+	BEFORE
 }

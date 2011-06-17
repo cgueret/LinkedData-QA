@@ -3,6 +3,8 @@ package nl.vu.qa_for_lod;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+
+import nl.vu.qa_for_lod.graph.Direction;
 import nl.vu.qa_for_lod.graph.impl.FileDataProvider;
 import nl.vu.qa_for_lod.graph.impl.WoDDataProvider;
 import nl.vu.qa_for_lod.metrics.Metric;
@@ -39,17 +41,17 @@ public class App {
 	private final FileDataProvider extraTriples;
 	private final MetricsExecutor metrics;
 	private final WoDDataProvider dataFetcher;
-
 	private static final Options options = new Options();
 
-	
-	public static void printHelpAndExit(int exitCode)
-	{
+	/**
+	 * @param exitCode
+	 */
+	public static void printHelpAndExit(int exitCode) {
 		HelpFormatter formatter = new HelpFormatter();
-		formatter.printHelp(App.class.getName(), options);		
+		formatter.printHelp(App.class.getName(), options);
 		System.exit(exitCode);
 	}
-	
+
 	/**
 	 * @param args
 	 * @throws Exception
@@ -71,6 +73,7 @@ public class App {
 		options.addOption(endpointsFileOption);
 		options.addOption("h", false, "print help message");
 		options.addOption("nogui", false, "disable the progress bar");
+		options.addOption("onlyout", false, "force to use only outgoing triples");
 
 		// Parse the command line
 		CommandLineParser parser = new PosixParser();
@@ -127,9 +130,14 @@ public class App {
 		// Use a GUI ?
 		boolean withGUI = !(cmd.hasOption("nogui"));
 
+		// By default, use both in and out triples
+		Direction direction = Direction.BOTH;
+		if (cmd.hasOption("onlyout"))
+			direction = Direction.OUT;
+		
 		// Create, init and run
 		App app = new App(triplesFile, resourcesFile, endpointsFile, cacheDirectory);
-		app.process(outputDirectory, withGUI);
+		app.process(outputDirectory, withGUI, direction);
 		app.close();
 		System.exit(0);
 	}
@@ -189,11 +197,12 @@ public class App {
 	/**
 	 * @param outputDirectory
 	 * @param withGUI
+	 * @param direction 
 	 * @throws Exception
 	 */
-	private void process(File outputDirectory, boolean withGUI) throws Exception {
+	private void process(File outputDirectory, boolean withGUI, Direction direction) throws Exception {
 		// Run all the metrics
-		metrics.processQueue(withGUI);
+		metrics.processQueue(withGUI, direction);
 
 		// Generate the analysis report
 		logger.info("Save execution report in " + outputDirectory + "/report.html");

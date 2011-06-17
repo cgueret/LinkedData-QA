@@ -6,6 +6,8 @@ package nl.vu.qa_for_lod.graph.impl;
 import java.util.HashSet;
 import java.util.Set;
 
+import nl.vu.qa_for_lod.graph.Direction;
+
 import org.deri.any23.extractor.ExtractionContext;
 import org.deri.any23.writer.TripleHandler;
 import org.deri.any23.writer.TripleHandlerException;
@@ -24,14 +26,17 @@ public class MyTripleHandler implements TripleHandler {
 	private final Set<Statement> buffer = new HashSet<Statement>();
 	private final com.hp.hpl.jena.rdf.model.Resource resource;
 	private final Model model;
+	private final Direction direction;
 
 	/**
-	 * @param resource2
+	 * @param resource
 	 * @param model
+	 * @param direction
 	 */
-	public MyTripleHandler(com.hp.hpl.jena.rdf.model.Resource resource, Model model) {
+	public MyTripleHandler(com.hp.hpl.jena.rdf.model.Resource resource, Model model, Direction direction) {
 		this.resource = resource;
 		this.model = model;
+		this.direction = direction;
 	}
 
 	/*
@@ -64,12 +69,21 @@ public class MyTripleHandler implements TripleHandler {
 	public void receiveTriple(Resource s, URI p, Value o, URI g, ExtractionContext context)
 			throws TripleHandlerException {
 		if (o instanceof org.openrdf.model.Resource && !(o instanceof org.openrdf.model.BNode)
-				&& s.toString().equals(resource.getURI())) {
+				&& s instanceof org.openrdf.model.Resource && !(s instanceof org.openrdf.model.BNode)) {
 			org.openrdf.model.Resource r = (org.openrdf.model.Resource) o;
 			com.hp.hpl.jena.rdf.model.Resource jenaS = model.createResource(s.stringValue());
 			com.hp.hpl.jena.rdf.model.Property jenaP = model.createProperty(p.stringValue());
 			com.hp.hpl.jena.rdf.model.RDFNode jenaO = model.createResource(r.stringValue());
-			buffer.add(model.createStatement(jenaS, jenaP, jenaO));
+
+			// Add outgoing triple
+			if (s.toString().equals(resource.getURI())
+					&& (direction.equals(Direction.OUT) || direction.equals(Direction.BOTH)))
+				buffer.add(model.createStatement(jenaS, jenaP, jenaO));
+
+			// Add incoming triple
+			if (o.toString().equals(resource.getURI())
+					&& (direction.equals(Direction.IN) || direction.equals(Direction.BOTH)))
+				buffer.add(model.createStatement(jenaS, jenaP, jenaO));
 		}
 	}
 

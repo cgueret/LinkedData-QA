@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
+import nl.vu.qa_for_lod.graph.Direction;
+
 import org.deri.any23.Any23;
 import org.deri.any23.extractor.ExtractionException;
 import org.deri.any23.http.HTTPClient;
@@ -43,28 +45,30 @@ import com.hp.hpl.jena.sparql.syntax.Template;
  * 
  */
 // TODO Add flag to SPARQL also for incoming relations
-public class DataAcquisitionTask implements Callable<Boolean> {
+public class DataAcquisitionTask implements Callable<Set<Statement>> {
 	// Logger
 	final static Logger logger = LoggerFactory.getLogger(DataAcquisitionTask.class);
 	// List of time to wait, in second, before trying a resource again
 	final static int[] RETRY_DELAY = { 1, 5, 10 };
 	// Target resource
 	final Resource resource;
-	// Set of statements retrieved
-	final Set<Statement> statements = new HashSet<Statement>();
 	// The model to bind the statements to
 	final Model model;
 	// List of end points to query
 	final List<String> endPoints;
+	// The direction telling if we need to retrieve RPO,SPR or both for R
+	final Direction direction;
 
 	/**
 	 * @param endPoints
 	 * @param resource
+	 * @param direction
 	 * @param model
 	 */
-	public DataAcquisitionTask(List<String> endPoints, Resource resource, Model model) {
+	public DataAcquisitionTask(List<String> endPoints, Resource resource, Direction direction, Model model) {
 		this.resource = resource;
 		this.model = model;
+		this.direction = direction;
 		this.endPoints = endPoints;
 	}
 
@@ -73,64 +77,85 @@ public class DataAcquisitionTask implements Callable<Boolean> {
 	 * 
 	 * @see java.util.concurrent.Callable#call()
 	 */
-	public Boolean call() throws Exception {
-		boolean success = false;
+	public Set<Statement> call() throws Exception {
+		// Set of statements retrieved
+		Set<Statement> statements = new HashSet<Statement>();
 
 		// Until we are successful, try every end point
 		int endpointIndex = 0;
-		while (!success && endpointIndex != endPoints.size()) {
-			success = queryEndPoint(endPoints.get(endpointIndex));
-			if (success)
-				logger.info("Got results for " + resource + " from " + endPoints.get(endpointIndex));
+		while (statements.isEmpty() && endpointIndex != endPoints.size()) {
+			queryEndPoint(statements, endPoints.get(endpointIndex));
+			if (!statements.isEmpty())
+				logger.info(String.format("Got %d results for %s from %s", statements.size(), resource,
+						endPoints.get(endpointIndex)));
 			endpointIndex++;
 		}
 
 		// Last chance, dereference the resource
-		if (!success)
-			success = dereferenceResource();
+		if (statements.isEmpty())
+			dereferenceResource(statements);
 
-		return success;
-	}
-
-	/**
-	 * @return
-	 */
-	public Set<Statement> getStatements() {
 		return statements;
 	}
 
+
 	/**
+	 * @param statements 
 	 * @param string
 	 * @return
 	 */
-	private boolean queryEndPoint(String serviceURI) {
-		// Compose the query
-		Node p = Node.createVariable("p");
-		Node o = Node.createVariable("o");
-		Query query = QueryFactory.create();
-		query.setQueryConstructType();
-		Triple triple = new Triple(resource.asNode(), p, o);
-		ElementGroup group = new ElementGroup();
-		group.addTriplePattern(triple);
-		group.addElementFilter(new ElementFilter(new E_IsURI(new ExprVar(o))));
-		BasicPattern bgp = new BasicPattern();
-		bgp.add(triple);
-		query.setConstructTemplate(new Template(bgp));
-		query.setQueryPattern(group);
-		
-		// Execute and add the results
-		QueryExecution qExec = QueryExecutionFactory.sparqlService(serviceURI, query);
-		Set<Statement> stmts = qExec.execConstruct().listStatements().toSet();
-		statements.addAll(stmts);
-		qExec.close();
+	private boolean queryEndPoint(Set<Statement> statements, String serviceURI) {
+		// Outgoing triples
+		if (direction.equals(Direction.OUT) || direction.equals(Direction.BOTH)) {
+			// Compose the query
+			Node p = Node.createVariable("p");
+			Node o = Node.createVariable("o");
+			Query query = QueryFactory.create();
+			query.setQueryConstructType();
+			Triple triple = new Triple(resource.asNode(), p, o);
+			ElementGroup group = new ElementGroup();
+			group.addTriplePattern(triple);
+			group.addElementFilter(new ElementFilter(new E_IsURI(new ExprVar(o))));
+			BasicPattern bgp = new BasicPattern();
+			bgp.add(triple);
+			query.setConstructTemplate(new Template(bgp));
+			query.setQueryPattern(group);
 
-		return (stmts.size() > 0);
+			// Execute and add the results
+			QueryExecution qExec = QueryExecutionFactory.sparqlService(serviceURI, query);
+			statements.addAll(qExec.execConstruct().listStatements().toSet());
+			qExec.close();
+		}
+
+		// Incoming triples
+		if (direction.equals(Direction.IN) || direction.equals(Direction.BOTH)) {
+			// Compose the query
+			Node s = Node.createVariable("s");
+			Node p = Node.createVariable("p");
+			Query query = QueryFactory.create();
+			query.setQueryConstructType();
+			Triple triple = new Triple(s, p, resource.asNode());
+			ElementGroup group = new ElementGroup();
+			group.addTriplePattern(triple);
+			BasicPattern bgp = new BasicPattern();
+			bgp.add(triple);
+			query.setConstructTemplate(new Template(bgp));
+			query.setQueryPattern(group);
+
+			// Execute and add the results
+			QueryExecution qExec = QueryExecutionFactory.sparqlService(serviceURI, query);
+			statements.addAll(qExec.execConstruct().listStatements().toSet());
+			qExec.close();
+		}
+
+		return (statements.size() > 0);
 	}
 
 	/**
+	 * @param statements 
 	 * @return
 	 */
-	private boolean dereferenceResource() {
+	private boolean dereferenceResource(Set<Statement> statements) {
 		// Try to download the resource
 		boolean retry = true;
 		int retryCount = 0;
@@ -144,7 +169,7 @@ public class DataAcquisitionTask implements Callable<Boolean> {
 				runner.setHTTPUserAgent("LATC QA tool prototype");
 				HTTPClient httpClient = runner.getHTTPClient();
 				DocumentSource source = new HTTPDocumentSource(httpClient, resource.getURI());
-				MyTripleHandler handler = new MyTripleHandler(resource, model);
+				MyTripleHandler handler = new MyTripleHandler(resource, model, direction);
 				runner.extract(source, handler);
 				statements.addAll(handler.getBuffer());
 
@@ -171,7 +196,7 @@ public class DataAcquisitionTask implements Callable<Boolean> {
 				// Something is wrong with the data, give up
 			} catch (Exception e) {
 				// What?! Ok, just give up anyway
-				e.printStackTrace();
+				// e.printStackTrace();
 			}
 		}
 
@@ -187,7 +212,7 @@ public class DataAcquisitionTask implements Callable<Boolean> {
 		endPoints.add("http://dbpedia.org/sparql");
 
 		DataAcquisitionTask me = new DataAcquisitionTask(endPoints,
-				ResourceFactory.createResource("http://dbpedia.org/resource/Amsterdam"),
+				ResourceFactory.createResource("http://dbpedia.org/resource/Amsterdam"), Direction.BOTH,
 				ModelFactory.createDefaultModel());
 		me.call();
 	}
