@@ -8,5 +8,16 @@ package nl.vu.qa_for_lod.graph;
  * 
  */
 public enum Direction {
-	BOTH, IN, OUT
+	/**
+	 * 
+	 */
+	BOTH, 
+	/**
+	 * 
+	 */
+	IN, 
+	/**
+	 * 
+	 */
+	OUT
 }

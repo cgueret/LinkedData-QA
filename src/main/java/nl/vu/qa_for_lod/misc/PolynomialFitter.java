@@ -51,13 +51,24 @@ import java.util.List;
  */
 public class PolynomialFitter {
 
+	/**
+	 *
+	 *
+	 */
 	public static class Polynomial extends ArrayList<Double> {
 		private static final long serialVersionUID = 1692843494322684190L;
 
+		/**
+		 * @param p
+		 */
 		public Polynomial(final int p) {
 			super(p);
 		}
 
+		/**
+		 * @param x
+		 * @return
+		 */
 		public double getY(final double x) {
 			double ret = 0;
 			for (int p = 0; p < size(); p++) {

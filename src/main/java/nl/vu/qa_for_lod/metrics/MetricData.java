@@ -47,6 +47,7 @@ public class MetricData {
 	}
 
 	/**
+	 * @param state 
 	 * @return
 	 */
 	public Distribution getDistribution(MetricState state) {
@@ -121,7 +122,9 @@ public class MetricData {
 	}
 
 	/**
-	 * @param results
+	 * @param state 
+	 * @param node 
+	 * @param value 
 	 */
 	public void setResult(MetricState state, Resource node, Double value) {
 		lock.lock();

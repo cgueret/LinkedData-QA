@@ -60,7 +60,7 @@ public class DistributionsTable extends HashMap<Double, Map<String, Double>> {
 	}
 
 	/**
-	 * @param distribs
+	 * @param fileName 
 	 * 
 	 */
 	public void write(String fileName) {
