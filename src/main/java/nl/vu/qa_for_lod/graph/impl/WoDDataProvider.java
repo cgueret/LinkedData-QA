@@ -9,9 +9,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -28,6 +28,7 @@ import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.tdb.TDBFactory;
 
 import nl.vu.qa_for_lod.graph.DataProvider;
+import nl.vu.qa_for_lod.graph.Direction;
 
 /**
  * @author Christophe Guéret <christophe.gueret@gmail.com>
@@ -37,14 +38,14 @@ import nl.vu.qa_for_lod.graph.DataProvider;
 public class WoDDataProvider implements DataProvider {
 	// Logger
 	final static Logger logger = LoggerFactory.getLogger(WoDDataProvider.class);
-	
+
 	// Stuff for the concurrent execution of data queries
+	final static int MAX_QUEUED_TASK = 100;
 	final ExecutorService executor = Executors.newFixedThreadPool(2);
-	final Map<Resource, DataAcquisitionTask> queue = new HashMap<Resource, DataAcquisitionTask>();
+	final Map<Resource, Future<Set<Statement>>> queue = new HashMap<Resource, Future<Set<Statement>>>();
 	final Lock queueLock = new ReentrantLock();
 	final Condition queueNotFull = queueLock.newCondition();
-	final static int MAX_QUEUED_TASK = 100;
-	
+
 	// Jena-based caching
 	final static Resource CACHE = ResourceFactory.createResource("http://example.org/cache");
 	final static Property CONTAINS = ResourceFactory.createProperty("http://example.org/contains");
@@ -54,7 +55,7 @@ public class WoDDataProvider implements DataProvider {
 
 	// List of end points
 	final List<String> endPoints = new ArrayList<String>();
-	
+
 	/**
 	 * @param endPointURI
 	 */
@@ -90,22 +91,27 @@ public class WoDDataProvider implements DataProvider {
 	 * nl.vu.qa_for_lod.graph.DataProvider#get(com.hp.hpl.jena.rdf.model.Resource
 	 * )
 	 */
-	public Set<Statement> get(Resource resource) {
+	public Set<Statement> get(Resource resource, Direction direction) {
 		// Try to get the content from the cache
 		modelLock.lock();
 		try {
-			if (model.contains(CACHE, CONTAINS, resource))
-				return model.listStatements(resource, (Property) null, (RDFNode) null).toSet();
+			if (model.contains(CACHE, CONTAINS, resource)) {
+				Set<Statement> statements = new HashSet<Statement>();
+				if (direction.equals(Direction.IN) || direction.equals(Direction.BOTH))
+					statements.addAll(model.listStatements((Resource) null, (Property) null, resource).toSet());
+				if (direction.equals(Direction.OUT) || direction.equals(Direction.BOTH))
+					statements.addAll(model.listStatements(resource, (Property) null, (RDFNode) null).toSet());
+				return statements;
+			}
 		} finally {
 			modelLock.unlock();
 		}
 
 		// Not in the cache, try to get the content
-		DataAcquisitionTask futureTask = null;
 		queueLock.lock();
 		try {
 			// Get the running task for this query
-			futureTask = queue.get(resource);
+			Future<Set<Statement>> futureTask = queue.get(resource);
 
 			// If it is non existing and the queue is full, wait and ask again
 			if (futureTask == null && queue.size() == MAX_QUEUED_TASK) {
@@ -116,50 +122,56 @@ public class WoDDataProvider implements DataProvider {
 
 			// If there is none, create one
 			if (futureTask == null) {
-				// logger.info("Download data for " + resource);
-				futureTask = new DataAcquisitionTask(endPoints, resource, model);
-				queue.put(resource, futureTask);
-				executor.submit(futureTask);
-			} else {
-				// logger.info("Already getting data for " + resource);
-			}
+				logger.info("Download data for " + resource);
+				DataAcquisitionTask dataTask = new DataAcquisitionTask(endPoints, resource, direction, model);
+				queue.put(resource, executor.submit(dataTask));
+			} 
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		} finally {
 			queueLock.unlock();
 		}
 
+		// Get the future task
+		queueLock.lock();
+		Future<Set<Statement>> futureTask = null;
+		try {
+			futureTask = queue.get(resource);
+		} finally {
+			queueLock.unlock();
+		}
+
 		// Wait for completion
 		try {
-			Boolean isSuccessful = futureTask.call();
-			if (isSuccessful) {
-				// Save the data
-				modelLock.lock();
-				model.add(CACHE, CONTAINS, resource);
-				for (Statement stmt : futureTask.getStatements())
-					model.add(stmt);
-				// model.commit();
-				modelLock.unlock();
-				return futureTask.getStatements();
-			} else {
+			Set<Statement> statements = futureTask.get();
+			modelLock.lock();
+			if (statements.isEmpty()) {
 				// Black list the resource
-				modelLock.lock();
-				logger.warn("Failed getting data from " + resource.getURI());
+				logger.warn("Failed getting data for " + resource.getURI());
 				model.add(CACHE, CONTAINS, resource);
 				model.add(CACHE, FAILED_ON, resource);
+				model.commit();
 				modelLock.unlock();
+			} else {
+				// Save the data
+				model.add(CACHE, CONTAINS, resource);
+				for (Statement stmt : statements)
+					model.add(stmt);
+				model.commit();
+				modelLock.unlock();
+				return statements;
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
 			queueLock.lock();
 			queue.remove(resource);
-			if (queue.size() != MAX_QUEUED_TASK)
+			if (queue.size() < MAX_QUEUED_TASK)
 				queueNotFull.signal();
 			queueLock.unlock();
 		}
 
-		// At worse, return an empty set
+		// In the worse case, return an empty set
 		return new HashSet<Statement>();
 	}
 }

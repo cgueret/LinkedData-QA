@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import nl.vu.qa_for_lod.graph.DataProvider;
+import nl.vu.qa_for_lod.graph.Direction;
 import nl.vu.qa_for_lod.graph.Graph;
 import nl.vu.qa_for_lod.graph.impl.JenaGraph;
 import nl.vu.qa_for_lod.metrics.Metric;
@@ -29,16 +30,22 @@ public class MetricsTask implements Runnable {
 	private final DataProvider extraTriples;
 	private final MetricsExecutor metricsExecutor;
 	private final Resource resource;
+	private final Direction direction;
 
 	/**
+	 * @param metricsExecutor
 	 * @param resource
+	 * @param dataFetcher
+	 * @param extraTriples
+	 * @param direction
 	 */
 	public MetricsTask(MetricsExecutor metricsExecutor, Resource resource, DataProvider dataFetcher,
-			DataProvider extraTriples) {
+			DataProvider extraTriples, Direction direction) {
 		this.resource = resource;
 		this.dataFetcher = dataFetcher;
 		this.metricsExecutor = metricsExecutor;
 		this.extraTriples = extraTriples;
+		this.direction = direction;
 	}
 
 	/*
@@ -57,7 +64,7 @@ public class MetricsTask implements Runnable {
 
 		try {
 			// Add the resource and expand it
-			for (Statement statement : dataFetcher.get(resource)) {
+			for (Statement statement : dataFetcher.get(resource, direction)) {
 				// Add the statement
 				graph.addStatement(statement);
 
@@ -65,7 +72,7 @@ public class MetricsTask implements Runnable {
 				Resource other = (statement.getSubject().equals(resource) ? statement.getObject().asResource()
 						: statement.getSubject());
 				if (!dereferencedResources.contains(other)) {
-					for (Statement otherStatement : dataFetcher.get(other))
+					for (Statement otherStatement : dataFetcher.get(other, direction))
 						graph.addStatement(otherStatement);
 					dereferencedResources.add(other);
 				}
@@ -79,7 +86,7 @@ public class MetricsTask implements Runnable {
 						metric.getResult(graph, resource));
 
 			// Add the statements from the extraLinks file
-			for (Statement statement : extraTriples.get(resource)) {
+			for (Statement statement : extraTriples.get(resource, direction)) {
 				// Add the statement
 				graph.addStatement(statement);
 
@@ -87,7 +94,7 @@ public class MetricsTask implements Runnable {
 				Resource other = (statement.getSubject().equals(resource) ? statement.getObject().asResource()
 						: statement.getSubject());
 				if (!dereferencedResources.contains(other)) {
-					for (Statement otherStatement : dataFetcher.get(other))
+					for (Statement otherStatement : dataFetcher.get(other, direction))
 						graph.addStatement(otherStatement);
 					dereferencedResources.add(other);
 				}

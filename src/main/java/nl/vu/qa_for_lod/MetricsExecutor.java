@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import com.hp.hpl.jena.rdf.model.Resource;
 import nl.vu.qa_for_lod.graph.DataProvider;
+import nl.vu.qa_for_lod.graph.Direction;
 import nl.vu.qa_for_lod.graph.impl.FileDataProvider;
 import nl.vu.qa_for_lod.metrics.Distribution;
 import nl.vu.qa_for_lod.metrics.Metric;
@@ -88,6 +89,7 @@ public class MetricsExecutor {
 	 */
 
 	/**
+	 * @param metric 
 	 * @return
 	 */
 	public MetricData getMetricData(Metric metric) {
@@ -104,10 +106,12 @@ public class MetricsExecutor {
 	}
 
 	/**
+	 * @param withGUI 
+	 * @param direction 
 	 * @throws Exception
 	 * 
 	 */
-	public void processQueue(boolean withGUI) throws Exception {
+	public void processQueue(boolean withGUI, Direction direction) throws Exception {
 		logger.info("Start processing " + resourceQueue.size() + " resources");
 
 		// Create an executor service
@@ -130,7 +134,7 @@ public class MetricsExecutor {
 		// Do the processing
 		List<Future<?>> futures = new ArrayList<Future<?>>();
 		for (Resource resource : resourceQueue) {
-			MetricsTask task = new MetricsTask(this, resource, dataFetcher, extraTriples);
+			MetricsTask task = new MetricsTask(this, resource, dataFetcher, extraTriples, direction);
 			Future<?> future = executorService.submit(task);
 			futures.add(future);
 		}

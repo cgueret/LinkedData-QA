@@ -27,8 +27,19 @@ import org.slf4j.LoggerFactory;
 public class Distribution {
 	static final Logger logger = LoggerFactory.getLogger(Distribution.class);
 
+	/**
+	 * @author Christophe Guéret <christophe.gueret@gmail.com>
+	 * 
+	 */
 	public static enum DistributionAxis {
-		X, Y
+		/**
+		 * 
+		 */
+		X,
+		/**
+		 * 
+		 */
+		Y
 	}
 
 	private final Map<Double, Double> data = new HashMap<Double, Double>();
@@ -52,9 +63,9 @@ public class Distribution {
 
 		// Measure the distance to that line
 		double d = 0;
-		for (Double key : keys) 
+		for (Double key : keys)
 			d += Math.abs(this.get(key) - other.get(key));
-		
+
 		return d;
 	}
 
@@ -162,8 +173,8 @@ public class Distribution {
 	}
 
 	/**
-	 * @param key
-	 * @param i
+	 * @param x
+	 * @param value
 	 */
 	public void set(double x, double value) {
 		Double key = Double.valueOf(df.format(x));
@@ -223,6 +234,8 @@ public class Distribution {
 
 	/**
 	 * Write the distribution to a file
+	 * 
+	 * @param fileName
 	 * 
 	 * @throws IOException
 	 */
