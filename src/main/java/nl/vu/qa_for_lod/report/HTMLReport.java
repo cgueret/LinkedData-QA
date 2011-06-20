@@ -196,27 +196,18 @@ public class HTMLReport {
 		TreeSet<Double> keys = new TreeSet<Double>();
 		keys.addAll(observedBefore.keySet());
 		keys.addAll(observedAfter.keySet());
-		// keys.remove(keys.first());
-
-		// keys.addAll(ideal.keySet());
+		
 		// Get the list of values for every key
 		List<Double> observedDataBefore = new ArrayList<Double>();
 		List<Double> observedDataAfter = new ArrayList<Double>();
-		// List<Double> idealData = new ArrayList<Double>();
-		// double d = 0;
 		for (Double key : keys) {
 			observedDataBefore.add(observedBefore.get(key));
 			observedDataAfter.add(observedAfter.get(key));
-			// idealData.add(ideal.get(key));
-			// d += ideal.get(key);
 		}
+		
+		// Create the two lines
 		Line d1 = Plots.newLine(DataUtil.scale(observedDataBefore), Color.BLUE, "before");
 		Line d2 = Plots.newLine(DataUtil.scale(observedDataAfter), Color.GREEN, "after");
-
-		// Line d3 = Plots.newLine(DataUtil.scale(idealData), Color.RED,
-		// "ideal");
-		// d3.setLineStyle(LineStyle.MEDIUM_DOTTED_LINE);
-
 		d1.addShapeMarkers(Shape.CIRCLE, Color.BLUE, 4);
 		d2.addShapeMarkers(Shape.CIRCLE, Color.GREEN, 4);
 
