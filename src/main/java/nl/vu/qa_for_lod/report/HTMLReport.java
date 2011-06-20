@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.Map.Entry;
 
@@ -50,6 +51,8 @@ import nl.vu.qa_for_lod.metrics.Distribution.DistributionAxis;
  */
 public class HTMLReport {
 	static Logger logger = LoggerFactory.getLogger(HTMLReport.class);
+	private static final int HAF_SIZE = 5;
+
 	/**
 	 * @param datasetName
 	 * @param executor
@@ -64,6 +67,7 @@ public class HTMLReport {
 		report.close();
 		return report;
 	}
+
 	private final StringBuffer buffer = new StringBuffer();
 
 	private final DecimalFormat df = new DecimalFormat("###.##");
@@ -104,7 +108,8 @@ public class HTMLReport {
 			// Generate the chart
 			try {
 				GChart chart = getChart(metric.getName(), observedDistributionBefore, observedDistributionAfter);
-				buffer.append("<img style=\"float:left;padding:5px;margin:5px\" src=\"").append(chart.toURLForHTML()).append("\"/>");
+				buffer.append("<img style=\"float:left;padding:5px;margin:5px\" src=\"").append(chart.toURLForHTML())
+						.append("\"/>");
 			} catch (IllegalArgumentException e) {
 
 			}
@@ -118,40 +123,23 @@ public class HTMLReport {
 	 * 
 	 */
 	private void appendHallOfFame(MetricsExecutor executor) {
-		// Compute the hall of fame
-		Map<Resource, Double> scores = new HashMap<Resource, Double>();
-		for (Metric metric : executor.getMetrics()) {
-			List<Resource> suspects = executor.getMetricData(metric).getSuspiciousNodes();
-			for (int index = 0; index < suspects.size(); index++) {
-				Resource key = suspects.get(index);
-				if (!scores.containsKey(key))
-					scores.put(key, new Double(0));
-				scores.put(key, scores.get(key) + suspects.size() - index);
-			}
-		}
-
-		// Get an ordered list of scores
-		TreeSet<Double> keys = new TreeSet<Double>();
-		keys.addAll(scores.values());
-		double max = executor.getMetrics().size() * scores.size() * 1.0d;
-
 		// Insert the HTML code
-		buffer.append("<h1>Outliers</h1>");
+		buffer.append("<h1>Outliers - top ").append(HAF_SIZE).append(" affected resources per metric</h1>");
 		buffer.append("<table><tr>");
-		buffer.append("<th>Score</th>");
-		buffer.append("<th>Resource</th>");
+		buffer.append("<th>Metric</th>");
+		for (int i=0; i < HAF_SIZE; i++)
+			buffer.append("<th>Resource (change)</th>");
 		buffer.append("</tr>");
-		int size = 10;
-		for (Double key : keys.descendingSet()) {
-			for (Entry<Resource, Double> entry : scores.entrySet()) {
-				if (size > 0 && entry.getValue().equals(key)) {
-					buffer.append("<tr>");
-					buffer.append("<td>").append(df.format(entry.getValue() / max)).append("</td>");
-					buffer.append("<td>").append(entry.getKey()).append("</td>");
-					buffer.append("</tr>");
-					size--;
-				}
-			}
+		for (Metric metric : executor.getMetrics()) {
+			buffer.append("<tr>");
+			buffer.append("<td>").append(metric.getName()).append("</td>");
+			Map<Resource, Double> changedNodes = executor.getMetricData(metric).getNodeChanges();
+			Set<Entry<Resource, Double>> entries = changedNodes.entrySet();
+			int count = 0;
+			for (Entry<Resource, Double> entry: entries) 
+				if (count++ < HAF_SIZE)
+					buffer.append("<td>").append(entry.getKey()).append(" (").append(df.format(entry.getValue())).append(" %)</td>");
+			buffer.append("</tr>");
 		}
 		buffer.append("</table>");
 	}
@@ -196,7 +184,7 @@ public class HTMLReport {
 		TreeSet<Double> keys = new TreeSet<Double>();
 		keys.addAll(observedBefore.keySet());
 		keys.addAll(observedAfter.keySet());
-		
+
 		// Get the list of values for every key
 		List<Double> observedDataBefore = new ArrayList<Double>();
 		List<Double> observedDataAfter = new ArrayList<Double>();
@@ -204,7 +192,7 @@ public class HTMLReport {
 			observedDataBefore.add(observedBefore.get(key));
 			observedDataAfter.add(observedAfter.get(key));
 		}
-		
+
 		// Create the two lines
 		Line d1 = Plots.newLine(DataUtil.scale(observedDataBefore), Color.BLUE, "before");
 		Line d2 = Plots.newLine(DataUtil.scale(observedDataAfter), Color.GREEN, "after");

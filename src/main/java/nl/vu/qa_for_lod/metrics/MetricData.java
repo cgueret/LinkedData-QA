@@ -6,9 +6,13 @@ package nl.vu.qa_for_lod.metrics;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.Map.Entry;
 import java.util.concurrent.locks.ReentrantLock;
@@ -47,7 +51,7 @@ public class MetricData {
 	}
 
 	/**
-	 * @param state 
+	 * @param state
 	 * @return
 	 */
 	public Distribution getDistribution(MetricState state) {
@@ -71,7 +75,7 @@ public class MetricData {
 	}
 
 	/**
-	 * List the top suspicious nodes
+	 * Return the list of changes in the values of the nodes
 	 * 
 	 * @param maximumResults
 	 *            The number of nodes to return
@@ -79,7 +83,7 @@ public class MetricData {
 	 * @return an ordered list of the top suspicious nodes according to the
 	 *         metric
 	 */
-	public List<Resource> getSuspiciousNodes() {
+	public Map<Resource, Double> getNodeChanges() {
 		// Get the results
 		Results resultsBefore = resultsMap.get(MetricState.BEFORE);
 		Results resultsAfter = resultsMap.get(MetricState.AFTER);
@@ -90,19 +94,24 @@ public class MetricData {
 
 		// Compare
 		Map<Resource, Double> diffs = new HashMap<Resource, Double>();
-		for (Resource key : keys)
-			diffs.put(key, Math.abs(resultsAfter.get(key) - resultsBefore.get(key)));
+		for (Resource key : keys) {
+			double ratio = 0;
+			if (resultsBefore.get(key) != 0)
+				ratio = 100 * ((resultsAfter.get(key) - resultsBefore.get(key)) / resultsBefore.get(key));
+			diffs.put(key, ratio);
+		}
 
 		// Get the ordered list of nodes
-		List<Resource> output = new ArrayList<Resource>();
-		Set<Double> scores = new TreeSet<Double>();
-		scores.addAll(diffs.values());
-		for (Double score : scores)
+		Map<Resource, Double> output = new LinkedHashMap<Resource, Double>();
+		TreeSet<Double> scores = new TreeSet<Double>(diffs.values());
+		Iterator<Double> it = scores.descendingIterator();
+		while (it.hasNext()) {
+			Double v = it.next();
 			for (Entry<Resource, Double> entry : diffs.entrySet())
-				if (entry.getValue().equals(score))
-					output.add(entry.getKey());
-
-		// Return the top "number"
+				if (entry.getValue().equals(v))
+					output.put(entry.getKey(), entry.getValue());
+		}
+		
 		return output;
 	}
 
@@ -122,9 +131,9 @@ public class MetricData {
 	}
 
 	/**
-	 * @param state 
-	 * @param node 
-	 * @param value 
+	 * @param state
+	 * @param node
+	 * @param value
 	 */
 	public void setResult(MetricState state, Resource node, Double value) {
 		lock.lock();
