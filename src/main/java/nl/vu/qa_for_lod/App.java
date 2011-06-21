@@ -119,8 +119,8 @@ public class App {
 		}
 
 		// Setup the output directory
-		String outDirName = cmd.getOptionValue("report");
-		if (outDirName == null)
+		String outDirName = cmd.getOptionValue("out");
+		if (outDirName == null || outDirName.trim().isEmpty())
 			outDirName = "reports/" + triplesFileName;
 		File outputDirectory = new File(outDirName);
 		if (!outputDirectory.exists())
