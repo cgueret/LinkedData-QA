@@ -182,7 +182,7 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 			try {
 				// Get the data
 				Any23 runner = new Any23();
-				runner.setHTTPUserAgent("LATC QA tool prototype");
+				runner.setHTTPUserAgent("LATC QA tool <c.d.m.gueret@vu.nl>");
 				HTTPClient httpClient = runner.getHTTPClient();
 				DocumentSource source = new HTTPDocumentSource(httpClient, resource.getURI());
 				MyTripleHandler handler = new MyTripleHandler(resource, model, direction);
