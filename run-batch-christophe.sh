@@ -5,7 +5,7 @@ FILES="geonames-linkedgeodata-library geonames-linkedgeodata-medical_centre geon
 for file in $FILES
 do
 	echo "Process $file"
-	params="-triples data-latc/$file.nt -endpoints data-latc/$file.txt"
+	params="-triples data-latc/$file.nt -endpoints data-latc/$file-named.txt"
 	$CMD $params
 done
 

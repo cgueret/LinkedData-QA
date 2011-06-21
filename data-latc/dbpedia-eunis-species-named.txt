@@ -1,0 +1,2 @@
+http://live.dbpedia.org/sparql/
+http://lsd.taxonconcept.org/sparql

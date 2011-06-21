@@ -29,6 +29,7 @@ import com.hp.hpl.jena.tdb.TDBFactory;
 
 import nl.vu.qa_for_lod.graph.DataProvider;
 import nl.vu.qa_for_lod.graph.Direction;
+import nl.vu.qa_for_lod.graph.EndPoint;
 
 /**
  * @author Christophe Guéret <christophe.gueret@gmail.com>
@@ -54,13 +55,13 @@ public class WoDDataProvider implements DataProvider {
 	final Model model;
 
 	// List of end points
-	final List<String> endPoints = new ArrayList<String>();
+	final List<EndPoint> endPoints = new ArrayList<EndPoint>();
 
 	/**
-	 * @param endPointURI
+	 * @param endPoint
 	 */
-	public void addEndPoint(String endPointURI) {
-		endPoints.add(endPointURI);
+	public void addEndPoint(EndPoint endPoint) {
+		endPoints.add(endPoint);
 	}
 
 	/**

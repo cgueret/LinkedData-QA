@@ -1,0 +1,2 @@
+http://lgd.aksw.org:8900/sparql http://geonames.org
+http://linkedgeodata.org/sparql/ http://linkedgeodata.org
