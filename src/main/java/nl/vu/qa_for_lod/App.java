@@ -72,6 +72,9 @@ public class App {
 		Option endpointsFileOption = OptionBuilder.withArgName("endpoints.txt").hasArg()
 				.withDescription("use the given file for the end points").create("endpoints");
 		options.addOption(endpointsFileOption);
+		Option maximumTriplesOption = OptionBuilder.withArgName("number").hasArg()
+				.withDescription("maximum amount of triples to consider (0 for unlimited)").create("max");
+		options.addOption(maximumTriplesOption);
 		options.addOption("h", false, "print help message");
 		options.addOption("nogui", false, "disable the progress bar");
 		options.addOption("onlyout", false, "force to use only outgoing triples");
@@ -136,8 +139,19 @@ public class App {
 		if (cmd.hasOption("onlyout"))
 			direction = Direction.OUT;
 
+		// Maximum amount of triples
+		int max = 150;
+		if (cmd.hasOption("max")) {
+			try {
+				max = Integer.parseInt(cmd.getOptionValue("max"));
+			} catch (Exception e) {
+				System.err.println("Invalid maximum amount of triples");
+				printHelpAndExit(-1);
+			}
+		}
+
 		// Create, init and run
-		App app = new App(triplesFile, resourcesFile, endpointsFile, cacheDirectory);
+		App app = new App(triplesFile, resourcesFile, endpointsFile, cacheDirectory, max);
 		app.process(outputDirectory, withGUI, direction);
 		app.close();
 		System.exit(0);
@@ -148,11 +162,12 @@ public class App {
 	 * @param resourcesFile
 	 * @param endpointsFile
 	 * @param cacheDirectory
+	 * @param max
 	 * @throws Exception
 	 */
-	public App(File triplesFile, File resourcesFile, File endpointsFile, File cacheDirectory) throws Exception {
+	public App(File triplesFile, File resourcesFile, File endpointsFile, File cacheDirectory, int max) throws Exception {
 		// Load the graph file
-		extraTriples = new FileDataProvider(triplesFile.getPath());
+		extraTriples = new FileDataProvider(triplesFile.getPath(), max);
 
 		// Create a data fetcher to get data for the resources
 		dataFetcher = new WoDDataProvider(cacheDirectory.getPath());
