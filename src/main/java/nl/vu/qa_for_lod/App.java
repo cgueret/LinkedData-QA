@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileReader;
 
 import nl.vu.qa_for_lod.graph.Direction;
+import nl.vu.qa_for_lod.graph.EndPoint;
 import nl.vu.qa_for_lod.graph.impl.FileDataProvider;
 import nl.vu.qa_for_lod.graph.impl.WoDDataProvider;
 import nl.vu.qa_for_lod.metrics.Metric;
@@ -71,6 +72,9 @@ public class App {
 		Option endpointsFileOption = OptionBuilder.withArgName("endpoints.txt").hasArg()
 				.withDescription("use the given file for the end points").create("endpoints");
 		options.addOption(endpointsFileOption);
+		Option maximumTriplesOption = OptionBuilder.withArgName("number").hasArg()
+				.withDescription("maximum amount of triples to consider (0 for unlimited)").create("max");
+		options.addOption(maximumTriplesOption);
 		options.addOption("h", false, "print help message");
 		options.addOption("nogui", false, "disable the progress bar");
 		options.addOption("onlyout", false, "force to use only outgoing triples");
@@ -134,9 +138,20 @@ public class App {
 		Direction direction = Direction.BOTH;
 		if (cmd.hasOption("onlyout"))
 			direction = Direction.OUT;
-		
+
+		// Maximum amount of triples
+		int max = 150;
+		if (cmd.hasOption("max")) {
+			try {
+				max = Integer.parseInt(cmd.getOptionValue("max"));
+			} catch (Exception e) {
+				System.err.println("Invalid maximum amount of triples");
+				printHelpAndExit(-1);
+			}
+		}
+
 		// Create, init and run
-		App app = new App(triplesFile, resourcesFile, endpointsFile, cacheDirectory);
+		App app = new App(triplesFile, resourcesFile, endpointsFile, cacheDirectory, max);
 		app.process(outputDirectory, withGUI, direction);
 		app.close();
 		System.exit(0);
@@ -147,11 +162,12 @@ public class App {
 	 * @param resourcesFile
 	 * @param endpointsFile
 	 * @param cacheDirectory
+	 * @param max
 	 * @throws Exception
 	 */
-	public App(File triplesFile, File resourcesFile, File endpointsFile, File cacheDirectory) throws Exception {
+	public App(File triplesFile, File resourcesFile, File endpointsFile, File cacheDirectory, int max) throws Exception {
 		// Load the graph file
-		extraTriples = new FileDataProvider(triplesFile.getPath());
+		extraTriples = new FileDataProvider(triplesFile.getPath(), max);
 
 		// Create a data fetcher to get data for the resources
 		dataFetcher = new WoDDataProvider(cacheDirectory.getPath());
@@ -159,9 +175,15 @@ public class App {
 		// Add the end points if they are provided
 		if (endpointsFile != null) {
 			BufferedReader reader = new BufferedReader(new FileReader(endpointsFile));
-			for (String line = reader.readLine(); line != null; line = reader.readLine())
-				if (!line.startsWith("#"))
-					dataFetcher.addEndPoint(line);
+			for (String line = reader.readLine(); line != null; line = reader.readLine()) {
+				if (!line.startsWith("#")) {
+					String[] parts = line.split(" ");
+					if (parts.length > 0) {
+						EndPoint endPoint = new EndPoint(parts[0], (parts.length > 1 ? parts[1] : null));
+						dataFetcher.addEndPoint(endPoint);
+					}
+				}
+			}
 			reader.close();
 		}
 
@@ -197,7 +219,7 @@ public class App {
 	/**
 	 * @param outputDirectory
 	 * @param withGUI
-	 * @param direction 
+	 * @param direction
 	 * @throws Exception
 	 */
 	private void process(File outputDirectory, boolean withGUI, Direction direction) throws Exception {

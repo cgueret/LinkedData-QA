@@ -97,4 +97,11 @@ public class JenaGraph implements Graph {
 		return neighbours;
 	}
 
+	/* (non-Javadoc)
+	 * @see nl.vu.qa_for_lod.graph.Graph#close()
+	 */
+	public void close() {
+		model.removeAll();
+		model.close();
+	}
 }

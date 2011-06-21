@@ -46,4 +46,9 @@ public interface Graph {
 	 */
 	public Set<Resource> getNeighbours(Resource resource, Direction direction, Property property);
 
+	/**
+	 * 
+	 */
+	public void close();
+
 }

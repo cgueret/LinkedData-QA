@@ -1,0 +1,2 @@
+http://api.talis.com/stores/ordnance-survey/services/sparql
+http://api.talis.com/stores/airports/services/sparql

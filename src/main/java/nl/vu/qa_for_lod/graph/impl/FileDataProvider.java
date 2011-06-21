@@ -38,11 +38,13 @@ public class FileDataProvider implements DataProvider {
 	 * This data provider serves a set of triples loaded from a file.
 	 * 
 	 * @param fileName
-	 *            the file containing the triples serialized as N3
+	 *            the file containing the triples serialised as N3
+	 * @param max
+	 *            maximum amount of triples to read
 	 * 
 	 * @throws Exception
 	 */
-	public FileDataProvider(String fileName) throws Exception {
+	public FileDataProvider(String fileName, int max) throws Exception {
 		// Read the file
 		Model model = ModelFactory.createDefaultModel();
 		RDFReader reader = model.getReader("N3");
@@ -53,12 +55,16 @@ public class FileDataProvider implements DataProvider {
 		}
 		reader.read(model, in, null);
 
+		int count = 0;
 		StmtIterator iter = model.listStatements();
 		while (iter.hasNext()) {
 			Statement stmt = iter.nextStatement();
 			if (stmt.getSubject() instanceof Resource && stmt.getObject() instanceof Resource) {
-				index(outgoingStatements, stmt, stmt.getSubject());
-				index(incomingStatements, stmt, stmt.getObject().asResource());
+				if (max == 0 || count < max) {
+					count++;
+					index(outgoingStatements, stmt, stmt.getSubject());
+					index(incomingStatements, stmt, stmt.getObject().asResource());
+				}
 			}
 		}
 		model.close();

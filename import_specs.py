@@ -11,14 +11,19 @@ def process_directory(dir_in, dir_out):
         links_in = dir_in + spec + "/links.nt"
         links_out = dir_out + spec + ".nt"
         spec_xml = dir_in + spec + "/spec.xml"
-        endpoints = dir_out + spec + ".txt"
+        endpoints = dir_out + spec + "-named.txt"
         if os.path.isfile(links_in) and os.path.isfile(spec_xml):
             print links_out
             shutil.copy(links_in, links_out)
             tree = etree.parse(spec_xml)
             file = open(endpoints, 'w')
             for source in tree.getroot().findall("DataSources/DataSource"):
-                file.write(source.findall("Param[@name=\"endpointURI\"]")[0].get("value") + "\n")
+                uri = source.findall("Param[@name=\"endpointURI\"]")[0].get("value")
+                graph = source.findall("Param[@name=\"graph\"]")
+                if len(graph) > 0:
+                    file.write(uri + " " + graph[0].get("value") + "\n")
+                else:
+                    file.write(uri + "\n");
             file.close()
 
 if __name__ == '__main__':

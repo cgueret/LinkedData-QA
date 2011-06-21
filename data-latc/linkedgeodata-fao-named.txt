@@ -1,0 +1,2 @@
+http://lgd.aksw.org:5678/sparql http://spatial-data.org/un-fao/
+http://linkedgeodata.org/sparql/ http://linkedgeodata.org

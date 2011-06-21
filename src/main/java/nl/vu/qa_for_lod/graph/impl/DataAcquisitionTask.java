@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 
 import nl.vu.qa_for_lod.graph.Direction;
+import nl.vu.qa_for_lod.graph.EndPoint;
 
 import org.deri.any23.Any23;
 import org.deri.any23.extractor.ExtractionException;
@@ -25,7 +26,6 @@ import org.slf4j.LoggerFactory;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.query.Query;
-import com.hp.hpl.jena.query.QueryExecution;
 import com.hp.hpl.jena.query.QueryExecutionFactory;
 import com.hp.hpl.jena.query.QueryFactory;
 import com.hp.hpl.jena.rdf.model.Model;
@@ -34,6 +34,7 @@ import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.sparql.core.BasicPattern;
+import com.hp.hpl.jena.sparql.engine.http.QueryEngineHTTP;
 import com.hp.hpl.jena.sparql.expr.E_IsURI;
 import com.hp.hpl.jena.sparql.expr.ExprVar;
 import com.hp.hpl.jena.sparql.syntax.ElementFilter;
@@ -55,7 +56,7 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 	// The model to bind the statements to
 	final Model model;
 	// List of end points to query
-	final List<String> endPoints;
+	final List<EndPoint> endPoints;
 	// The direction telling if we need to retrieve RPO,SPR or both for R
 	final Direction direction;
 
@@ -65,7 +66,7 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 	 * @param direction
 	 * @param model
 	 */
-	public DataAcquisitionTask(List<String> endPoints, Resource resource, Direction direction, Model model) {
+	public DataAcquisitionTask(List<EndPoint> endPoints, Resource resource, Direction direction, Model model) {
 		this.resource = resource;
 		this.model = model;
 		this.direction = direction;
@@ -98,13 +99,12 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 		return statements;
 	}
 
-
 	/**
-	 * @param statements 
+	 * @param statements
 	 * @param string
 	 * @return
 	 */
-	private boolean queryEndPoint(Set<Statement> statements, String serviceURI) {
+	private boolean queryEndPoint(Set<Statement> statements, EndPoint endPoint) {
 		// Outgoing triples
 		if (direction.equals(Direction.OUT) || direction.equals(Direction.BOTH)) {
 			// Compose the query
@@ -122,9 +122,17 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 			query.setQueryPattern(group);
 
 			// Execute and add the results
-			QueryExecution qExec = QueryExecutionFactory.sparqlService(serviceURI, query);
-			statements.addAll(qExec.execConstruct().listStatements().toSet());
-			qExec.close();
+			QueryEngineHTTP qExec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(endPoint.getURI(), query);
+			if (endPoint.getGraph() != null)
+				qExec.addDefaultGraph(endPoint.getGraph());
+			try {
+				statements.addAll(qExec.execConstruct().listStatements().toSet());
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				if (qExec != null)
+					qExec.close();
+			}
 		}
 
 		// Incoming triples
@@ -143,16 +151,24 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 			query.setQueryPattern(group);
 
 			// Execute and add the results
-			QueryExecution qExec = QueryExecutionFactory.sparqlService(serviceURI, query);
-			statements.addAll(qExec.execConstruct().listStatements().toSet());
-			qExec.close();
+			QueryEngineHTTP qExec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(endPoint.getURI(), query);
+			if (endPoint.getGraph() != null)
+				qExec.addDefaultGraph(endPoint.getGraph());
+			try {
+				statements.addAll(qExec.execConstruct().listStatements().toSet());
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				if (qExec != null)
+					qExec.close();
+			}
 		}
 
 		return (statements.size() > 0);
 	}
 
 	/**
-	 * @param statements 
+	 * @param statements
 	 * @return
 	 */
 	private boolean dereferenceResource(Set<Statement> statements) {
@@ -208,8 +224,8 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception {
-		List<String> endPoints = new ArrayList<String>();
-		endPoints.add("http://dbpedia.org/sparql");
+		List<EndPoint> endPoints = new ArrayList<EndPoint>();
+		endPoints.add(new EndPoint("http://dbpedia.org/sparql","http://dbpedia.org"));
 
 		DataAcquisitionTask me = new DataAcquisitionTask(endPoints,
 				ResourceFactory.createResource("http://dbpedia.org/resource/Amsterdam"), Direction.BOTH,
