@@ -128,6 +128,7 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 			try {
 				statements.addAll(qExec.execConstruct().listStatements().toSet());
 			} catch (Exception e) {
+				logger.warn("Error with " + endPoint.toString());
 				e.printStackTrace();
 			} finally {
 				if (qExec != null)
@@ -138,8 +139,8 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 		// Incoming triples
 		if (direction.equals(Direction.IN) || direction.equals(Direction.BOTH)) {
 			// Compose the query
-			Node s = Node.createVariable("s");
 			Node p = Node.createVariable("p");
+			Node s = Node.createVariable("s");
 			Query query = QueryFactory.create();
 			query.setQueryConstructType();
 			Triple triple = new Triple(s, p, resource.asNode());
@@ -157,6 +158,7 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 			try {
 				statements.addAll(qExec.execConstruct().listStatements().toSet());
 			} catch (Exception e) {
+				logger.warn("Error with " + endPoint.toString());
 				e.printStackTrace();
 			} finally {
 				if (qExec != null)
