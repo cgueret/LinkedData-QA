@@ -98,9 +98,8 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 		return statements;
 	}
 
-
 	/**
-	 * @param statements 
+	 * @param statements
 	 * @param string
 	 * @return
 	 */
@@ -123,8 +122,14 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 
 			// Execute and add the results
 			QueryExecution qExec = QueryExecutionFactory.sparqlService(serviceURI, query);
-			statements.addAll(qExec.execConstruct().listStatements().toSet());
-			qExec.close();
+			try {
+				statements.addAll(qExec.execConstruct().listStatements().toSet());
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				if (qExec != null)
+					qExec.close();
+			}
 		}
 
 		// Incoming triples
@@ -144,15 +149,21 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 
 			// Execute and add the results
 			QueryExecution qExec = QueryExecutionFactory.sparqlService(serviceURI, query);
-			statements.addAll(qExec.execConstruct().listStatements().toSet());
-			qExec.close();
+			try {
+				statements.addAll(qExec.execConstruct().listStatements().toSet());
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				if (qExec != null)
+					qExec.close();
+			}
 		}
 
 		return (statements.size() > 0);
 	}
 
 	/**
-	 * @param statements 
+	 * @param statements
 	 * @return
 	 */
 	private boolean dereferenceResource(Set<Statement> statements) {
