@@ -1,0 +1,2 @@
+http://semanticweb.cs.vu.nl/europeana/sparql/
+http://semanticweb.cs.vu.nl/europeana/sparql/

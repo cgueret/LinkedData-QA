@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileReader;
 
 import nl.vu.qa_for_lod.graph.Direction;
+import nl.vu.qa_for_lod.graph.EndPoint;
 import nl.vu.qa_for_lod.graph.impl.FileDataProvider;
 import nl.vu.qa_for_lod.graph.impl.WoDDataProvider;
 import nl.vu.qa_for_lod.metrics.Metric;
@@ -134,7 +135,7 @@ public class App {
 		Direction direction = Direction.BOTH;
 		if (cmd.hasOption("onlyout"))
 			direction = Direction.OUT;
-		
+
 		// Create, init and run
 		App app = new App(triplesFile, resourcesFile, endpointsFile, cacheDirectory);
 		app.process(outputDirectory, withGUI, direction);
@@ -159,9 +160,15 @@ public class App {
 		// Add the end points if they are provided
 		if (endpointsFile != null) {
 			BufferedReader reader = new BufferedReader(new FileReader(endpointsFile));
-			for (String line = reader.readLine(); line != null; line = reader.readLine())
-				if (!line.startsWith("#"))
-					dataFetcher.addEndPoint(line);
+			for (String line = reader.readLine(); line != null; line = reader.readLine()) {
+				if (!line.startsWith("#")) {
+					String[] parts = line.split(" ");
+					if (parts.length > 0) {
+						EndPoint endPoint = new EndPoint(parts[0], (parts.length > 1 ? parts[1] : null));
+						dataFetcher.addEndPoint(endPoint);
+					}
+				}
+			}
 			reader.close();
 		}
 
@@ -197,7 +204,7 @@ public class App {
 	/**
 	 * @param outputDirectory
 	 * @param withGUI
-	 * @param direction 
+	 * @param direction
 	 * @throws Exception
 	 */
 	private void process(File outputDirectory, boolean withGUI, Direction direction) throws Exception {

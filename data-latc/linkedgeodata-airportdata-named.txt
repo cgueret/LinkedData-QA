@@ -1,0 +1,2 @@
+http://api.talis.com/stores/airports/services/sparql
+http://linkedgeodata.org/sparql/ http://linkedgeodata.org

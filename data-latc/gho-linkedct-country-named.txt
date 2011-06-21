@@ -1,0 +1,2 @@
+http://lgd.aksw.org:8900/sparql
+http://lgd.aksw.org:8900/sparql

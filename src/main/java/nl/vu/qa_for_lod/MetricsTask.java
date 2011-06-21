@@ -109,6 +109,7 @@ public class MetricsTask implements Runnable {
 			// Just skip resources that don't work
 		} finally {
 			// metricsExecutor.incrementBar();
+			graph.close();
 		}
 	}
 
