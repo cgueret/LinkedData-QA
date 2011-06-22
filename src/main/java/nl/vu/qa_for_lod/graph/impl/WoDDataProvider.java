@@ -99,7 +99,9 @@ public class WoDDataProvider implements DataProvider {
 			if (model.contains(CACHE, CONTAINS, resource)) {
 				Set<Statement> statements = new HashSet<Statement>();
 				if (direction.equals(Direction.IN) || direction.equals(Direction.BOTH))
-					statements.addAll(model.listStatements((Resource) null, (Property) null, resource).toSet());
+					for (Statement st: model.listStatements((Resource) null, (Property) null, resource).toSet())
+						if (!st.getSubject().equals(CACHE))
+							statements.add(st);
 				if (direction.equals(Direction.OUT) || direction.equals(Direction.BOTH))
 					statements.addAll(model.listStatements(resource, (Property) null, (RDFNode) null).toSet());
 				return statements;
@@ -148,7 +150,7 @@ public class WoDDataProvider implements DataProvider {
 			modelLock.lock();
 			if (statements.isEmpty()) {
 				// Black list the resource
-				logger.warn("Failed getting data for " + resource.getURI());
+				logger.warn("Empty data for " + resource.getURI());
 				model.add(CACHE, CONTAINS, resource);
 				model.add(CACHE, FAILED_ON, resource);
 				model.commit();
