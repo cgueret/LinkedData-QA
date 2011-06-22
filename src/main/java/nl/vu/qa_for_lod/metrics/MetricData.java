@@ -91,10 +91,10 @@ public class MetricData {
 		// Compare
 		Map<Resource, Double> diffs = new HashMap<Resource, Double>();
 		for (Resource key : keys) {
-			double ratio = 0;
-			if (resultsBefore.get(key) != 0)
-				ratio = 100 * ((resultsAfter.get(key) - resultsBefore.get(key)) / resultsBefore.get(key));
-			diffs.put(key, ratio);
+			//double ratio = 0;
+			//if (resultsBefore.get(key) != 0)
+			//	ratio = 100 * ((resultsAfter.get(key) - resultsBefore.get(key)) / resultsBefore.get(key));
+			diffs.put(key, resultsAfter.get(key) - resultsBefore.get(key));
 		}
 
 		// Get the ordered list of nodes
