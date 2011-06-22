@@ -137,7 +137,7 @@ public class HTMLReport {
 			int count = 0;
 			for (Entry<Resource, Double> entry: entries) 
 				if (count++ < HAF_SIZE)
-					buffer.append("<td>").append(entry.getKey()).append(" (").append(df.format(entry.getValue())).append(" %)</td>");
+					buffer.append("<td>").append(entry.getKey()).append(" (").append(entry.getValue()).append(")</td>");
 			buffer.append("</tr>");
 		}
 		buffer.append("</table>");
