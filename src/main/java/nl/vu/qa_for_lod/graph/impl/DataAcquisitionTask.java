@@ -72,8 +72,7 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 	// How often an unavailable host has been attempted to contact
 	// FIXME This map should be shared by all threads
 	Map<String, Integer> unavailableHostToReferenceCount = new HashMap<String, Integer>();
-	
-	
+
 	// Increments the value for a given key
 	public static <K> int current(Map<K, Integer> map, K key) {
 		Integer value = map.get(key);
@@ -84,7 +83,6 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 		map.put(key, current(map, key) + 1);
 	}
 
-	
 	/**
 	 * @param endPoints
 	 * @param resource
@@ -130,25 +128,23 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 	 * @return
 	 */
 	private boolean queryEndPoint(Set<Statement> statements, EndPoint endPoint) {
-
 		// Half the value of maxResultSetSize for both directions
-		Integer resultSetSize = null;
-		if(maxResultSetSize != null) {
-			if(direction.equals(Direction.BOTH)) {
-				resultSetSize = maxResultSetSize / 2;
-			} else {
-				resultSetSize = maxResultSetSize;
-			}
-		}
+		// Integer resultSetSize = null;
+		// if(maxResultSetSize != null) {
+		// if(direction.equals(Direction.BOTH)) {
+		// resultSetSize = maxResultSetSize / 2;
+		// } else {
+		// resultSetSize = maxResultSetSize;
+		// }
+		// }
 
 		// Outgoing triples
 		if (direction.equals(Direction.OUT) || direction.equals(Direction.BOTH)) {
 			// Compose the query
-			Node p = Node.createVariable("p");
 			Node o = Node.createVariable("o");
 			Query query = QueryFactory.create();
 			query.setQueryConstructType();
-			Triple triple = new Triple(resource.asNode(), p, o);
+			Triple triple = new Triple(resource.asNode(), Node.createVariable("p"), o);
 			ElementGroup group = new ElementGroup();
 			group.addTriplePattern(triple);
 			group.addElementFilter(new ElementFilter(new E_IsURI(new ExprVar(o))));
@@ -157,30 +153,19 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 			query.setConstructTemplate(new Template(bgp));
 			query.setQueryPattern(group);
 
-			if(resultSetSize != null) {
-				query.setLimit(resultSetSize);
-			}
-			
+			// if(resultSetSize != null) {
+			// query.setLimit(resultSetSize);
+			// }
+
 			// Execute and add the results
-			QueryEngineHTTP qExec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(endPoint.getURI(), query);
-			if (endPoint.getGraph() != null)
-				qExec.addDefaultGraph(endPoint.getGraph());
-			try {
-				statements.addAll(qExec.execConstruct().listStatements().toSet());
-			} catch (Exception e) {
-				logger.warn("Error with " + endPoint.toString());
-				e.printStackTrace();
-			} finally {
-				if (qExec != null)
-					qExec.close();
-			}
+			statements.addAll(PaginatedQueryExec.processConstruct(endPoint, query));
 		}
 
-		// Incoming triples		
+		// Incoming triples
 		if (direction.equals(Direction.IN) || direction.equals(Direction.BOTH)) {
 			// Compose the query
-			Node p = Node.createVariable("p");
 			Node s = Node.createVariable("s");
+			Node p = Node.createVariable("p");
 			Query query = QueryFactory.create();
 			query.setQueryConstructType();
 			Triple triple = new Triple(s, p, resource.asNode());
@@ -191,23 +176,12 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 			query.setConstructTemplate(new Template(bgp));
 			query.setQueryPattern(group);
 
-			if(resultSetSize != null) {
-				query.setLimit(resultSetSize);
-			}
-			
+			// if (resultSetSize != null) {
+			// query.setLimit(resultSetSize);
+			// }
+
 			// Execute and add the results
-			QueryEngineHTTP qExec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(endPoint.getURI(), query);
-			if (endPoint.getGraph() != null)
-				qExec.addDefaultGraph(endPoint.getGraph());
-			try {
-				statements.addAll(qExec.execConstruct().listStatements().toSet());
-			} catch (Exception e) {
-				logger.warn("Error with " + endPoint.toString());
-				e.printStackTrace();
-			} finally {
-				if (qExec != null)
-					qExec.close();
-			}
+			statements.addAll(PaginatedQueryExec.processConstruct(endPoint, query));
 		}
 
 		return (statements.size() > 0);
@@ -232,7 +206,7 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 				hostName = resourceUrl.getHost();
 
 				Integer errorCount = unavailableHostToReferenceCount.get(hostName);
-				if(errorCount != null && errorCount > maxHostErrorCount) {
+				if (errorCount != null && errorCount > maxHostErrorCount) {
 					logger.warn("Error count for host '" + hostName + "' exceeded limit - skipped.");
 				}
 
@@ -246,21 +220,19 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 				statements.addAll(handler.getBuffer());
 
 				// Reduce the statements
-				// FIXME Is there a way to skip statements before the whole document
+				// FIXME Is there a way to skip statements before the whole
+				// document
 				// has been downloaded?
-				int statementIndex = 0;
-				for(Iterator<Statement> it = statements.iterator(); it.hasNext();) {
-					it.next();
-					if(statementIndex > maxResultSetSize) {
-						it.remove();
-					}
-					
-					statementIndex++;
-				}
-				int removalCount = Math.max(statementIndex - maxResultSetSize, 0);
-				if(removalCount > 0) {
-					logger.warn("Skipped " + removalCount + " triples from document.");
-				}
+				/*
+				 * int statementIndex = 0; for (Iterator<Statement> it =
+				 * statements.iterator(); it.hasNext();) { it.next(); if
+				 * (statementIndex > maxResultSetSize) { it.remove(); }
+				 * 
+				 * statementIndex++; } int removalCount =
+				 * Math.max(statementIndex - maxResultSetSize, 0); if
+				 * (removalCount > 0) { logger.warn("Skipped " + removalCount +
+				 * " triples from document."); }
+				 */
 				
 				// We were successful
 				return true;
@@ -278,7 +250,8 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 					retryCount++;
 				}
 				increment(unavailableHostToReferenceCount, hostName);
-				logger.warn("Host '" + hostName + "' error count is: " + unavailableHostToReferenceCount.get(hostName) + "/" + maxHostErrorCount);
+				logger.warn("Host '" + hostName + "' error count is: " + unavailableHostToReferenceCount.get(hostName)
+						+ "/" + maxHostErrorCount);
 			} catch (MalformedURLException e) {
 				// We could not parse the uri (similar to next catch block)
 			} catch (URISyntaxException e) {
@@ -286,12 +259,14 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 			} catch (IOException e) {
 				// 404 or alike, not worth trying again
 				increment(unavailableHostToReferenceCount, hostName);
-				logger.warn("Host '" + hostName + "' error count is: " + unavailableHostToReferenceCount.get(hostName) + "/" + maxHostErrorCount);
+				logger.warn("Host '" + hostName + "' error count is: " + unavailableHostToReferenceCount.get(hostName)
+						+ "/" + maxHostErrorCount);
 			} catch (ExtractionException e) {
 				// Something is wrong with the data, give up
 			} catch (Exception e) {
 				increment(unavailableHostToReferenceCount, hostName);
-				logger.warn("Host '" + hostName + "' error count is: " + unavailableHostToReferenceCount.get(hostName) + "/" + maxHostErrorCount);				
+				logger.warn("Host '" + hostName + "' error count is: " + unavailableHostToReferenceCount.get(hostName)
+						+ "/" + maxHostErrorCount);
 				// What?! Ok, just give up anyway
 				// e.printStackTrace();
 			}
@@ -306,7 +281,7 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 	 */
 	public static void main(String[] args) throws Exception {
 		List<EndPoint> endPoints = new ArrayList<EndPoint>();
-		endPoints.add(new EndPoint("http://dbpedia.org/sparql","http://dbpedia.org"));
+		endPoints.add(new EndPoint("http://dbpedia.org/sparql", "http://dbpedia.org"));
 
 		DataAcquisitionTask me = new DataAcquisitionTask(endPoints,
 				ResourceFactory.createResource("http://dbpedia.org/resource/Amsterdam"), Direction.BOTH,
