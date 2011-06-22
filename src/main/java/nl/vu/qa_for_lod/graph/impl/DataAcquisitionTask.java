@@ -4,11 +4,16 @@
 package nl.vu.qa_for_lod.graph.impl;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
@@ -59,7 +64,27 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 	final List<EndPoint> endPoints;
 	// The direction telling if we need to retrieve RPO,SPR or both for R
 	final Direction direction;
+	// Maximum numbers of triples to retrieve from sparql and rdf docs
+	// If direction is both, then each direction gets hasf of it
+	final Integer maxResultSetSize = 150;
+	// Maximum number of failures before we give up on an host
+	final Integer maxHostErrorCount = 3;
+	// How often an unavailable host has been attempted to contact
+	// FIXME This map should be shared by all threads
+	Map<String, Integer> unavailableHostToReferenceCount = new HashMap<String, Integer>();
+	
+	
+	// Increments the value for a given key
+	public static <K> int current(Map<K, Integer> map, K key) {
+		Integer value = map.get(key);
+		return value == null ? 0 : value;
+	}
 
+	public static <K> void increment(Map<K, Integer> map, K key) {
+		map.put(key, current(map, key) + 1);
+	}
+
+	
 	/**
 	 * @param endPoints
 	 * @param resource
@@ -105,6 +130,17 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 	 * @return
 	 */
 	private boolean queryEndPoint(Set<Statement> statements, EndPoint endPoint) {
+
+		// Half the value of maxResultSetSize for both directions
+		Integer resultSetSize = null;
+		if(maxResultSetSize != null) {
+			if(direction.equals(Direction.BOTH)) {
+				resultSetSize = maxResultSetSize / 2;
+			} else {
+				resultSetSize = maxResultSetSize;
+			}
+		}
+
 		// Outgoing triples
 		if (direction.equals(Direction.OUT) || direction.equals(Direction.BOTH)) {
 			// Compose the query
@@ -121,6 +157,10 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 			query.setConstructTemplate(new Template(bgp));
 			query.setQueryPattern(group);
 
+			if(resultSetSize != null) {
+				query.setLimit(resultSetSize);
+			}
+			
 			// Execute and add the results
 			QueryEngineHTTP qExec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(endPoint.getURI(), query);
 			if (endPoint.getGraph() != null)
@@ -136,7 +176,7 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 			}
 		}
 
-		// Incoming triples
+		// Incoming triples		
 		if (direction.equals(Direction.IN) || direction.equals(Direction.BOTH)) {
 			// Compose the query
 			Node p = Node.createVariable("p");
@@ -151,6 +191,10 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 			query.setConstructTemplate(new Template(bgp));
 			query.setQueryPattern(group);
 
+			if(resultSetSize != null) {
+				query.setLimit(resultSetSize);
+			}
+			
 			// Execute and add the results
 			QueryEngineHTTP qExec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(endPoint.getURI(), query);
 			if (endPoint.getGraph() != null)
@@ -181,7 +225,17 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 			// Be optimistic
 			retry = false;
 
+			// We blacklist the hostname if it causes troubles
+			String hostName = "";
 			try {
+				URL resourceUrl = new URL(resource.getURI());
+				hostName = resourceUrl.getHost();
+
+				Integer errorCount = unavailableHostToReferenceCount.get(hostName);
+				if(errorCount != null && errorCount > maxHostErrorCount) {
+					logger.warn("Error count for host '" + hostName + "' exceeded limit - skipped.");
+				}
+
 				// Get the data
 				Any23 runner = new Any23();
 				runner.setHTTPUserAgent("LATC QA tool <c.d.m.gueret@vu.nl>");
@@ -191,6 +245,23 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 				runner.extract(source, handler);
 				statements.addAll(handler.getBuffer());
 
+				// Reduce the statements
+				// FIXME Is there a way to skip statements before the whole document
+				// has been downloaded?
+				int statementIndex = 0;
+				for(Iterator<Statement> it = statements.iterator(); it.hasNext();) {
+					it.next();
+					if(statementIndex > maxResultSetSize) {
+						it.remove();
+					}
+					
+					statementIndex++;
+				}
+				int removalCount = Math.max(statementIndex - maxResultSetSize, 0);
+				if(removalCount > 0) {
+					logger.warn("Skipped " + removalCount + " triples from document.");
+				}
+				
 				// We were successful
 				return true;
 			} catch (SocketTimeoutException e) {
@@ -206,10 +277,16 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 					retry = true;
 					retryCount++;
 				}
-			} catch (IOException e) {
-				// 404 or alike, not worth trying again
+				increment(unavailableHostToReferenceCount, hostName);
+				logger.warn("Host '" + hostName + "' error count is: " + unavailableHostToReferenceCount.get(hostName) + "/" + maxHostErrorCount);
+			} catch (MalformedURLException e) {
+				// We could not parse the uri (similar to next catch block)
 			} catch (URISyntaxException e) {
 				// Error in URI, unlikely to change
+			} catch (IOException e) {
+				// 404 or alike, not worth trying again
+				increment(unavailableHostToReferenceCount, hostName);
+				logger.warn("Host '" + hostName + "' error count is: " + unavailableHostToReferenceCount.get(hostName) + "/" + maxHostErrorCount);
 			} catch (ExtractionException e) {
 				// Something is wrong with the data, give up
 			} catch (Exception e) {
