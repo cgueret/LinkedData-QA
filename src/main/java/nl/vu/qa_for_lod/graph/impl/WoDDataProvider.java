@@ -150,7 +150,7 @@ public class WoDDataProvider implements DataProvider {
 			modelLock.lock();
 			if (statements.isEmpty()) {
 				// Black list the resource
-				logger.warn("Failed getting data for " + resource.getURI());
+				logger.warn("Empty data for " + resource.getURI());
 				model.add(CACHE, CONTAINS, resource);
 				model.add(CACHE, FAILED_ON, resource);
 				model.commit();
