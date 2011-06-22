@@ -40,7 +40,9 @@ import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.sparql.core.BasicPattern;
 import com.hp.hpl.jena.sparql.engine.http.QueryEngineHTTP;
+import com.hp.hpl.jena.sparql.expr.E_IsBlank;
 import com.hp.hpl.jena.sparql.expr.E_IsURI;
+import com.hp.hpl.jena.sparql.expr.E_LogicalNot;
 import com.hp.hpl.jena.sparql.expr.ExprVar;
 import com.hp.hpl.jena.sparql.syntax.ElementFilter;
 import com.hp.hpl.jena.sparql.syntax.ElementGroup;
@@ -144,15 +146,16 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 			Node o = Node.createVariable("o");
 			Query query = QueryFactory.create();
 			query.setQueryConstructType();
+			query.setDistinct(true);
 			Triple triple = new Triple(resource.asNode(), Node.createVariable("p"), o);
 			ElementGroup group = new ElementGroup();
 			group.addTriplePattern(triple);
 			group.addElementFilter(new ElementFilter(new E_IsURI(new ExprVar(o))));
+			group.addElementFilter(new ElementFilter(new E_LogicalNot(new E_IsBlank(new ExprVar(o)))));
 			BasicPattern bgp = new BasicPattern();
 			bgp.add(triple);
 			query.setConstructTemplate(new Template(bgp));
 			query.setQueryPattern(group);
-
 			// if(resultSetSize != null) {
 			// query.setLimit(resultSetSize);
 			// }
@@ -165,12 +168,13 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 		if (direction.equals(Direction.IN) || direction.equals(Direction.BOTH)) {
 			// Compose the query
 			Node s = Node.createVariable("s");
-			Node p = Node.createVariable("p");
 			Query query = QueryFactory.create();
 			query.setQueryConstructType();
-			Triple triple = new Triple(s, p, resource.asNode());
+			query.setDistinct(true);
+			Triple triple = new Triple(s, Node.createVariable("p"), resource.asNode());
 			ElementGroup group = new ElementGroup();
 			group.addTriplePattern(triple);
+			group.addElementFilter(new ElementFilter(new E_LogicalNot(new E_IsBlank(new ExprVar(s)))));
 			BasicPattern bgp = new BasicPattern();
 			bgp.add(triple);
 			query.setConstructTemplate(new Template(bgp));
@@ -221,8 +225,7 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 
 				// Reduce the statements
 				// FIXME Is there a way to skip statements before the whole
-				// document
-				// has been downloaded?
+				// document has been downloaded? -> Nope
 				/*
 				 * int statementIndex = 0; for (Iterator<Statement> it =
 				 * statements.iterator(); it.hasNext();) { it.next(); if
@@ -284,9 +287,10 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 		endPoints.add(new EndPoint("http://dbpedia.org/sparql", "http://dbpedia.org"));
 
 		DataAcquisitionTask me = new DataAcquisitionTask(endPoints,
-				ResourceFactory.createResource("http://dbpedia.org/resource/Amsterdam"), Direction.BOTH,
+				ResourceFactory.createResource("http://dbpedia.org/resource/Amsterdam"), Direction.OUT,
 				ModelFactory.createDefaultModel());
-		me.call();
+		for (Statement st: me.call())
+			System.out.println(st);
 	}
 
 }
