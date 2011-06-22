@@ -81,7 +81,7 @@ public class SameAsChains implements Metric {
 			paths.add(newPath);
 		} else {
 			for (Resource nextNode : nextNodes) {
-				if (!currentPath.contains(nextNode)) {
+				if (!currentPath.contains(nextNode) && currentPath.size() < 5) {
 					List<Resource> newPath = new ArrayList<Resource>();
 					newPath.addAll(currentPath);
 					newPath.add(nextNode);
