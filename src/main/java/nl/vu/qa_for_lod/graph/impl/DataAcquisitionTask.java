@@ -290,6 +290,8 @@ public class DataAcquisitionTask implements Callable<Set<Statement>> {
 			} catch (ExtractionException e) {
 				// Something is wrong with the data, give up
 			} catch (Exception e) {
+				increment(unavailableHostToReferenceCount, hostName);
+				logger.warn("Host '" + hostName + "' error count is: " + unavailableHostToReferenceCount.get(hostName) + "/" + maxHostErrorCount);				
 				// What?! Ok, just give up anyway
 				// e.printStackTrace();
 			}
