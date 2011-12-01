@@ -34,6 +34,8 @@ public class FileDataProvider implements DataProvider {
 	private final Map<Resource, Set<Statement>> outgoingStatements = new HashMap<Resource, Set<Statement>>();
 	private final Map<Resource, Set<Statement>> incomingStatements = new HashMap<Resource, Set<Statement>>();
 
+	private Model model;
+	
 	/**
 	 * This data provider serves a set of triples loaded from a file.
 	 * 
@@ -46,7 +48,7 @@ public class FileDataProvider implements DataProvider {
 	 */
 	public FileDataProvider(String fileName, int max) throws Exception {
 		// Read the file
-		Model model = ModelFactory.createDefaultModel();
+		model = ModelFactory.createDefaultModel();
 		RDFReader reader = model.getReader("N3");
 		reader.setProperty("WARN_REDEFINITION_OF_ID", "EM_IGNORE"); // speed
 		InputStream in = FileManager.get().open(fileName);
@@ -67,11 +69,17 @@ public class FileDataProvider implements DataProvider {
 				}
 			}
 		}
-		model.close();
+		//model.close();
 
 		logger.info(String.format("Loaded %d triples from %s", size(), fileName));
 	}
 
+	public Model getModel()
+	{
+		return model;
+	}
+	
+	
 	/*
 	 * (non-Javadoc)
 	 * 

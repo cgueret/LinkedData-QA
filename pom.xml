@@ -12,6 +12,7 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<aksw.commons.version>0.2-SNAPSHOT</aksw.commons.version>
 	</properties>
 
 	<build>
@@ -26,7 +27,7 @@
 					</descriptorRefs>
 					<archive>
 						<manifest>
-							<mainClass>nl.vu.qa_for_lod.App</mainClass>
+							<mainClass>nl.vu.qa_for_lod.App2</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
@@ -48,6 +49,20 @@
 					<skipTests>true</skipTests>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>org.mortbay.jetty</groupId>
+				<artifactId>jetty-maven-plugin</artifactId>
+				<configuration>
+					<systemProperties>
+						<systemProperty>
+							<name>jetty.port</name>
+							<value>8080</value>
+						</systemProperty>
+					</systemProperties>
+					<reload>manual</reload>
+				</configuration>
+			</plugin>
+			
 		</plugins>
 	</build>
 	<repositories>
@@ -61,6 +76,20 @@
 			<id>any23-repository</id>
 			<url>http://any23.googlecode.com/svn/repo</url>
 		</repository>
+		
+		<!-- AKSW Maven Repository. -->
+		<repository>
+			<id>maven.aksw.org/repository/internal</id>
+			<name>University Leipzig, AKSW Maven Internal Repository</name>
+			<url>http://maven.aksw.org/repository/internal</url>
+		</repository>
+
+		<repository>
+			<id>maven.aksw.org/repository/snapshot</id>
+			<name>University Leipzig, AKSW Maven Snapshot Repository</name>
+			<url>http://maven.aksw.org/repository/snapshots</url>
+		</repository>
+
 	</repositories>
 	<dependencies>
 		<dependency>
@@ -197,6 +226,42 @@
 			<groupId>commons-cli</groupId>
 			<artifactId>commons-cli</artifactId>
 			<version>1.2</version>
+		</dependency>
+
+	    <dependency>
+	      <groupId>com.ontologycentral</groupId>
+	      <artifactId>ldspider</artifactId>
+	      <version>1.1d</version>
+	    </dependency>
+
+		<dependency>
+			<groupId>com.sun.jersey</groupId>
+			<artifactId>jersey-core</artifactId>
+			<version>1.8</version>
+		</dependency>
+		<dependency>
+			<groupId>com.sun.jersey</groupId>
+			<artifactId>jersey-server</artifactId>
+			<version>1.8</version>
+		</dependency>
+		<dependency>
+			<groupId>org.mortbay.jetty</groupId>
+			<artifactId>jetty</artifactId>
+			<version>7.0.0.pre5</version>
+			<type>jar</type>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.aksw.commons</groupId>
+			<artifactId>sparql</artifactId>
+			<version>${aksw.commons.version}</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.aksw.commons</groupId>
+			<artifactId>model</artifactId>
+			<version>${aksw.commons.version}</version>
+			<scope>compile</scope>
 		</dependency>
 	</dependencies>
 </project>

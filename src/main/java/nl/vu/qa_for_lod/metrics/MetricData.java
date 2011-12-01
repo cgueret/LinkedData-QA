@@ -53,8 +53,13 @@ public class MetricData {
 	public Distribution getDistribution(MetricState state) {
 		if (distributionMap.get(state) == null) {
 			Distribution distribution = new Distribution();
-			for (Entry<Resource, Double> r : resultsMap.get(state).entrySet())
-				distribution.increaseCounter(r.getValue());
+			
+			if(resultsMap.get(state) != null) {
+				for (Entry<Resource, Double> r : resultsMap.get(state).entrySet()) {
+					distribution.increaseCounter(r.getValue());
+				}
+			}
+			
 			distributionMap.put(state, distribution);
 		}
 		return distributionMap.get(state);
