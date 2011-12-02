@@ -19,7 +19,7 @@ maxRunCount=1
 
 n=50
 
-for dir in `find "$posNegRepo" -type d`; do
+for dir in `find "$posNegRepo" -maxdepth 1 -mindepth 1 -type d`; do
 
     for (( i=1; i<=$maxRunCount; ++i )); do
 
