@@ -19,19 +19,23 @@ maxRunCount=1
 
 n=50
 
+type="$1"
+
+if [ -z "$type" ]; then
+	echo "Please specify positive or negative"
+	exit
+fi
+
 for dir in `find "$posNegRepo" -maxdepth 1 -mindepth 1 -type d`; do
 
     for (( i=1; i<=$maxRunCount; ++i )); do
 
-	posFile="$dir/positive.nt"
-	negFile="$dir/negative.nt"
+	file="$dir/$type.nt"
 	endpointsFile="$dir/endpoints.txt"
-	posOutDir="$dir/$i/positive"
-	negOutDir="$dir/$i/negative"
+	outDir="$dir/$type/$i"
 
-       cmdPos="java -Xmx4096M -server -d64 -jar target/qa_for_lod-0.0.1-SNAPSHOT-jar-with-dependencies.jar -onlyout -nogui -triples $n $posFile -out $posOutDir -endpoints $endpointsFile -seed $i"
 
-	cmdNeg="java -Xmx4096M -server -d64 -jar target/qa_for_lod-0.0.1-SNAPSHOT-jar-with-dependencies.jar -onlyout -nogui -triples $n $negFile -out $negOutDir -endpoints $endpointsFile -seed $i"
+	cmd="java -Xmx4096M -server -d64 -jar target/qa_for_lod-0.0.1-SNAPSHOT-jar-with-dependencies.jar -onlyout -nogui -triples $n $file -out $outDir -endpoints $endpointsFile -seed $i"
 
        echo "$cmd"
        echo ""
@@ -39,14 +43,12 @@ for dir in `find "$posNegRepo" -maxdepth 1 -mindepth 1 -type d`; do
        echo ""
        echo "Processing:"
        echo "---------------------------------------------"
-	echo "Source Directory            : $dir"
-	echo "Output Directory (positive) : $posOutDir"
-	echo "Output Directory (negative) : $negOutDir"
-	echo "Seed                        : $i"
-#       echo "Cmd = $cmd"
-	echo "Endpoint                    : $endpointsFile"
-       $cmdPos
-	$cmdNeg
+	echo "Type            : $type"
+	echo "Source Directory: $dir"
+	echo "Output Directory: $outDir"
+	echo "Seed            : $i"
+	echo "Endpoint        : $endpointsFile"
+	$cmd
     done
 done
 

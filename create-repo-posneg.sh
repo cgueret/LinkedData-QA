@@ -3,7 +3,7 @@
 #outBase="repo-posneg"
 source config
 
-minTripleCount=20
+minTripleCount=10
 
 for dir in `find "$latcRepo" -type d`; do
 

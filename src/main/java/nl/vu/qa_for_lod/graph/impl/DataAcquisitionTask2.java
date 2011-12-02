@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.core.util.StatusPrinter;
 
+import com.clarkparsia.owlapiv3.OWL;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.query.QueryExecution;
@@ -60,7 +61,7 @@ public class DataAcquisitionTask2
 	implements Callable<Model>
 {
 	// Logger
-	final static Logger logger = LoggerFactory.getLogger(DataAcquisitionTask.class);
+	final static Logger logger = LoggerFactory.getLogger(DataAcquisitionTask2.class);
 
 	private DataAcquisitionConfig config;
 	
@@ -85,6 +86,12 @@ public class DataAcquisitionTask2
 	 */
 	public Model call() throws Exception {
 
+		/*
+		if(resource.toString().equals("http://www.w3.org/2002/07/owl#Thing")) {
+			System.out.println(resource);
+			System.out.println(OWL.Thing);
+		}*/
+		
 		if(cache != null) {
 			Model cached = cache.get(resource);
 			if(cached != null) {
@@ -130,6 +137,8 @@ public class DataAcquisitionTask2
 		QueryExecution execution = factory.createQueryExecution(query);
 		try {
 			execution.execConstruct(result);
+		} catch(NotImplementedException e) {
+			throw e;
 		}
 		catch(QueryExceptionHTTP e) {
 			System.out.println("Code = " + e.getResponseCode());

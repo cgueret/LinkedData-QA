@@ -62,7 +62,7 @@
 					<reload>manual</reload>
 				</configuration>
 			</plugin>
-			
+
 		</plugins>
 	</build>
 	<repositories>
@@ -76,7 +76,7 @@
 			<id>any23-repository</id>
 			<url>http://any23.googlecode.com/svn/repo</url>
 		</repository>
-		
+
 		<!-- AKSW Maven Repository. -->
 		<repository>
 			<id>maven.aksw.org/repository/internal</id>
@@ -140,6 +140,14 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+		<dependency>
+			<groupId>org.ini4j</groupId>
+			<artifactId>ini4j</artifactId>
+			<version>0.5.1</version>
+			<type>jar</type>
+			<scope>compile</scope>
+		</dependency>
+
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpclient</artifactId>
@@ -228,11 +236,11 @@
 			<version>1.2</version>
 		</dependency>
 
-	    <dependency>
-	      <groupId>com.ontologycentral</groupId>
-	      <artifactId>ldspider</artifactId>
-	      <version>1.1d</version>
-	    </dependency>
+		<dependency>
+			<groupId>com.ontologycentral</groupId>
+			<artifactId>ldspider</artifactId>
+			<version>1.1d</version>
+		</dependency>
 
 		<dependency>
 			<groupId>com.sun.jersey</groupId>

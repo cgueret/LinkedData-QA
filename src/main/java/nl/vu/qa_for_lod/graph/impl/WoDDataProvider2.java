@@ -31,7 +31,7 @@ public class WoDDataProvider2 implements DataProvider {
 
 	// Stuff for the concurrent execution of data queries
 	final static int MAX_QUEUED_TASK = 100;
-	final ExecutorService executor = Executors.newFixedThreadPool(2);
+	final ExecutorService executor = Executors.newFixedThreadPool(5);
 	final Map<Resource, Future<Model>> queue = new HashMap<Resource, Future<Model>>();
 	final Lock queueLock = new ReentrantLock();
 	final Condition queueNotFull = queueLock.newCondition();

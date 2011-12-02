@@ -123,6 +123,12 @@ public class DereferencerAny23
 				runner.extract(source, handler);
 				runner.getHTTPClient().close();
 
+				if(url.trim().equals("http://www.w3.org/2002/07/owl#Thing")) {
+					if(result.isEmpty()) {
+						System.out.println("SHOULD NOT HAPPEN");
+						System.exit(0);
+					}
+				}
 
 				
 				if(result.isEmpty()) {

@@ -60,7 +60,7 @@ public class MetricsExecutor {
 	 *            the data provider serving the extra set of triples for the
 	 *            comparative analysis
 	 */
-	public MetricsExecutor(DataProvider dataFetcher, FileDataProvider extraTriples) {
+	public MetricsExecutor(DataProvider dataFetcher, DataProvider extraTriples) {
 		this.dataFetcher = dataFetcher;
 		this.extraTriples = extraTriples;
 	}

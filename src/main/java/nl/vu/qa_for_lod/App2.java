@@ -2,21 +2,26 @@ package nl.vu.qa_for_lod;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 import nl.vu.qa_for_lod.graph.DataAcquisitionTaskFactory;
 import nl.vu.qa_for_lod.graph.DataProvider;
 import nl.vu.qa_for_lod.graph.Direction;
 import nl.vu.qa_for_lod.graph.EndPoint;
+import nl.vu.qa_for_lod.graph.impl.CannedQueryUtils;
 import nl.vu.qa_for_lod.graph.impl.DataAcquisitionConfig;
 import nl.vu.qa_for_lod.graph.impl.DataAcquisitionTaskFactoryImpl;
+import nl.vu.qa_for_lod.graph.impl.DataProviderMap;
 import nl.vu.qa_for_lod.graph.impl.DataProviderSubtract;
+import nl.vu.qa_for_lod.graph.impl.DataProviderUtils;
 import nl.vu.qa_for_lod.graph.impl.DereferencerAny23;
-import nl.vu.qa_for_lod.graph.impl.FileDataProvider;
 import nl.vu.qa_for_lod.graph.impl.WoDDataProvider2;
 import nl.vu.qa_for_lod.metrics.Metric;
 import nl.vu.qa_for_lod.metrics.MetricState;
@@ -28,6 +33,8 @@ import nl.vu.qa_for_lod.metrics.impl.SameAsChains;
 import nl.vu.qa_for_lod.report.DistributionsTable;
 import nl.vu.qa_for_lod.report.HTMLReport;
 
+import org.aksw.commons.jena.ModelSetView;
+import org.aksw.commons.jena.ModelUtils;
 import org.aksw.commons.sparql.api.cache.core.QueryExecutionFactoryCacheEx;
 import org.aksw.commons.sparql.api.cache.extra.CacheCoreEx;
 import org.aksw.commons.sparql.api.cache.extra.CacheCoreH2;
@@ -38,6 +45,7 @@ import org.aksw.commons.sparql.api.dereference.Dereferencer;
 import org.aksw.commons.sparql.api.dereference.QueryExecutionFactoryDereference;
 import org.aksw.commons.sparql.api.http.QueryExecutionFactoryHttp;
 import org.aksw.commons.sparql.api.pagination.core.QueryExecutionFactoryPaginated;
+import org.aksw.commons.util.strings.StringUtils;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -49,8 +57,43 @@ import org.mortbay.jetty.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.io.Files;
+import com.hp.hpl.jena.graph.Node;
+import com.hp.hpl.jena.rdf.model.Model;
+import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.ResourceFactory;
+import com.hp.hpl.jena.rdf.model.Statement;
+
+class SampleFile
+{
+	private File file;
+	private Integer sampleSize;
+	
+	/**
+	 * 
+	 * 
+	 * @param file
+	 * @param sampleSize null if not specified
+	 */
+	public SampleFile(File file, Integer sampleSize) {
+		this.file = file;
+		this.sampleSize = sampleSize;
+	}
+
+	public File getFile() {
+		return file;
+	}
+
+	public Integer getSampleSize() {
+		return sampleSize;
+	}
+
+	@Override
+	public String toString() {
+		return "SampleFile [file=" + file + ", sampleSize=" + sampleSize + "]";
+	}
+}
 
 
 
@@ -62,17 +105,24 @@ import com.hp.hpl.jena.rdf.model.ResourceFactory;
 // they are suspicious)
 public class App2 {
 	static Logger logger = LoggerFactory.getLogger(App2.class);
-	private final FileDataProvider extraTriples;
+	private final DataProviderMap extraTriples;
 	private final MetricsExecutor metrics;
 	private final DataProvider dataFetcher;
 	private static final Options options = new Options();
 
 	
+	public static void printHelpAndExit(int exitCode, String errorMessage) {
+		if(errorMessage != null) {
+			System.err.println(errorMessage);
+		}
+		
+		printHelpAndExit(exitCode);
+	}	
 	
 	/**
 	 * @param exitCode
 	 */
-	public static void printHelpAndExit(int exitCode) {
+	public static void printHelpAndExit(int exitCode) {		
 		HelpFormatter formatter = new HelpFormatter();
 		formatter.printHelp(App2.class.getName(), options);
 		System.exit(exitCode);
@@ -85,6 +135,7 @@ public class App2 {
 	public static void main(String[] args) throws Exception {
 		try {
 			init(args);
+			//initTest(args);
 		} catch(Exception e) {
 			logger.error("An error occurred", e);
 			System.exit(-1);
@@ -93,15 +144,131 @@ public class App2 {
 		System.exit(0);
 	}
 	
+	
+	/**
+	 * Parsing works as follows:
+	 * 
+	 * Usually we expect pairs of (key, value) corresponding to (sampleSize, fileName).
+	 * if interpreting the key as a file points to an existing file, sampleSize is treated as
+	 * not specified, and the value of that pair is skipped.
+	 *  
+	 * 
+	 * 
+	 * @param args
+	 * @return
+	 * @throws Exception
+	 */
+	private static List<SampleFile> parseSamples(String[] values) throws Exception
+	{		
+		List<SampleFile> result = new ArrayList<SampleFile>();
+		
+		int i = 0;
+		while(i < values.length) {
+			String key = values[i++];
+
+			File file = new File(key);
+			if(file.exists()) {
+				
+				result.add(new SampleFile(file, null));
+				
+				continue;
+			}
+			
+			Integer sampleSize;
+			try {
+				sampleSize = Integer.parseInt(key);
+			} catch (Exception e) {
+				throw new RuntimeException("Failed to parse sample size value '" + key + "'", e);
+			}
+			
+			if(sampleSize < 0) {
+				sampleSize = null;
+			}
+			
+			if(i >= values.length) {
+				throw new RuntimeException("File name expected");
+			}
+			
+			String value = values[i++];
+			file = new File(value);
+			if(!file.exists()) {
+				throw new FileNotFoundException(value);
+			}
+
+			result.add(new SampleFile(file, sampleSize));
+		}
+
+		return result;
+	}
+
+	public static Model prepareSample(List<SampleFile> sampleFiles, Random random)
+			throws Exception
+	{
+		return prepareSample(sampleFiles, ModelFactory.createDefaultModel(), random);
+	}
+
+	public static <T> void retainRandomSample(List<T> inout, int sampleSize, Random random)
+    {
+        Collections.shuffle(inout, random);
+
+        inout.subList(Math.min(sampleSize, inout.size()), inout.size()).clear();
+    }
+
+	public static Model prepareSample(List<SampleFile> sampleFiles, Model result, Random random)
+			throws Exception
+	{
+
+		for(SampleFile sampleFile : sampleFiles) {
+			Model tmp = ModelUtils.read(sampleFile.getFile());
+			if(sampleFile.getSampleSize() == null) {
+				result.add(tmp);
+				logger.info("Loaded " + sampleFile.getFile().getAbsolutePath() + " for " + tmp.size() + " triples"); 
+			}
+			else {
+				List<Statement> sample = new ArrayList<Statement>(new ModelSetView(tmp));
+				retainRandomSample(sample, sampleFile.getSampleSize(), random);
+
+				logger.info("Sampled " + sampleFile.getFile().getAbsolutePath() + " for " + sample.size() + " triples"); 
+				result.add(sample);
+			}
+		}
+		
+	
+		return result;
+	}
+	
+	
+	
+	/**
+	 * For the evaluation:
+	 * 
+	 * Set the random seed
+	 * Specify a set of files combined with the sample size
+	 * -seed 123456 -f 150 positive.nt -f 150 negative.nt  
+	 * 
+	 * 
+	 * 
+	 * @param args
+	 * @throws Exception
+	 */
+	
 	@SuppressWarnings("static-access")
 	private static void init(String[] args) throws Exception {
 		
 		// Build the options
+		
+		
+		Option randomSeedOption = OptionBuilder.withArgName("0").hasArg()
+				.withDescription("Random seed. Default is 0.").create("seed");
+		options.addOption(randomSeedOption);
+
 		Option outDirOption = OptionBuilder.withArgName("directory").hasArg()
 				.withDescription("output directory for the results").create("out");
 		options.addOption(outDirOption);
-		Option triplesFileOption = OptionBuilder.withArgName("triples.nt").hasArg()
+		
+		Option triplesFileOption = OptionBuilder.withArgName("triples.nt").hasArgs()
 				.withDescription("use the given file for the extra triples").create("triples");
+		
 		options.addOption(triplesFileOption);
 		Option resourcesFileOption = OptionBuilder.withArgName("resources.txt").hasArg()
 				.withDescription("use the given file for the resources").create("resources");
@@ -109,13 +276,18 @@ public class App2 {
 		Option endpointsFileOption = OptionBuilder.withArgName("endpoints.txt").hasArg()
 				.withDescription("use the given file for the end points").create("endpoints");
 		options.addOption(endpointsFileOption);
+		
+		/* Use '-triples 120 myfile.nt' instead
 		Option maximumTriplesOption = OptionBuilder.withArgName("number").hasArg()
 				.withDescription("maximum amount of triples to consider (0 for unlimited)").create("max");
 		options.addOption(maximumTriplesOption);
+		*/
+		
 		options.addOption("h", false, "print help message");
 		options.addOption("nogui", false, "disable the progress bar");
 		options.addOption("onlyout", false, "force to use only outgoing triples");
 
+		
 		// Parse the command line
 		CommandLineParser parser = new PosixParser();
 		CommandLine cmd = parser.parse(options, args);
@@ -124,20 +296,46 @@ public class App2 {
 		if (cmd.hasOption("h")) {
 			printHelpAndExit(0);
 		}
+		
+		// Get the random seed
+		long randomSeed = 0;
+		String randomSeedStr = cmd.getOptionValue("seed");
+		if(randomSeedStr != null) {
+			try {
+				randomSeed = Long.parseLong(randomSeedStr);
+			} catch(Exception e) {
+				printHelpAndExit(-1, "Could not parse random seed");
+			}
+		}
+
+		
+		logger.info("Using random seed " + randomSeed);
+		
+		Random random = new Random(randomSeed);
+		
 
 		// Get the name of the data file
-		String triplesFilePath = cmd.getOptionValue("triples");
-		if (triplesFilePath == null) {
+		String[] sampleFileStrs = cmd.getOptionValues("triples");
+		if (sampleFileStrs == null) {
 			System.err.println("You must provide a valid set of triples");
 			printHelpAndExit(-1);
 		}
-
+		
+		List<SampleFile> sampleFiles = parseSamples(sampleFileStrs);
+		
+		if(sampleFiles.isEmpty()) {
+			printHelpAndExit(-1, "No input samples provided");
+		}
+		
+		
+/*
 		File triplesFile = new File(triplesFilePath);
 		if (!triplesFile.exists()) {
 			System.err.println("The specified file '" + triplesFile.getAbsolutePath() + "' does not exist.");
 			printHelpAndExit(-1);
 		}
 		String triplesFileName = triplesFile.getName();
+*/
 
 		// Get resources file name
 		String resourcesFileName = cmd.getOptionValue("resources");
@@ -157,16 +355,48 @@ public class App2 {
 
 		// Setup the output directory
 		String outDirName = cmd.getOptionValue("out");
-		if (outDirName == null || outDirName.trim().isEmpty())
-			outDirName = "reports/" + triplesFileName;
+		if (outDirName == null || outDirName.trim().isEmpty()) {
+			//outDirName = "reports/" + triplesFileName;
+			throw new RuntimeException("No output directory specified");
+		}
 		File outputDirectory = new File(outDirName);
-		if (!outputDirectory.exists())
+		if (!outputDirectory.exists()) {
 			outputDirectory.mkdirs();
+		}
 
+		// Prepare the sample
+		Model sample = prepareSample(sampleFiles, random);
+		
+		// For the record: Write the sample into the output dir
+		File sampleFile = new File(outDirName + "/sample.nt");
+		if(sampleFile.exists()) {
+			logger.warn(sampleFile.getAbsolutePath() + " exists. Backing up.");
+			
+			File backup = new File(sampleFile.getAbsoluteFile() + ".bak");
+	
+			boolean overwrite = backup.exists();
+			Files.copy(sampleFile, backup);
+
+			if(overwrite) {
+				logger.warn("Overwrote " + backup.getAbsolutePath());
+			}
+
+			//throw new RuntimeException(sampleFile.getAbsolutePath() + " exists. ");
+		}
+		
+		FileOutputStream fos = new FileOutputStream(sampleFile);
+		
+		sample.write(fos, "N-TRIPLES");
+		fos.flush();
+		fos.close();		
+		
+		
 		// Prepare caching dir
+		/*
 		File cacheDirectory = new File("cache/" + triplesFileName);
 		if (!cacheDirectory.exists())
 			cacheDirectory.mkdirs();
+		*/
 
 		// Use a GUI ?
 		boolean withGUI = !(cmd.hasOption("nogui"));
@@ -176,6 +406,10 @@ public class App2 {
 		if (cmd.hasOption("onlyout"))
 			direction = Direction.OUT;
 
+		
+		String cacheDirName = "cache";
+		
+		/*
 		// Maximum amount of triples
 		int max = 150;
 		if (cmd.hasOption("max")) {
@@ -185,21 +419,24 @@ public class App2 {
 				System.err.println("Invalid maximum amount of triples");
 				printHelpAndExit(-1);
 			}
-		}
-		
+		}*/
+		//direction = Direction.IN; 
 		logger.info("DIRECTION: " + direction);
 		
 		// Start a server that lets us check the status (by default http://localhost:7531/status)
-		Server server = StatusServer.startServer();
+		//Server server = StatusServer.startServer();
+		Server server = null;
 		
 		try {
 			// Create, init and run
-			App2 app = new App2(triplesFile, resourcesFile, endpointsFile, cacheDirectory, max, direction);
+			App2 app = new App2(sample, resourcesFile, endpointsFile, cacheDirName, direction);
 			app.process(outputDirectory, withGUI, direction);
 			app.close();
 		} finally {
-			server.stop();
-			server.destroy();
+			if(server != null) {
+				server.stop();
+				server.destroy();
+			}
 		}
 	}
 
@@ -214,21 +451,44 @@ public class App2 {
 	 * @param max
 	 * @throws Exception
 	 */
-	public App2(File triplesFile, File resourcesFile, File endpointsFile, File cacheDirectory, int max, Direction direction) throws Exception {
-		// Load the graph file
-		extraTriples = new FileDataProvider(triplesFile.getPath(), max);
+	public App2(Model sample, File resourcesFile, File endpointsFile, String cacheDirName, Direction direction) throws Exception {
+
+		extraTriples = DataProviderUtils.create(sample);
+
 
 		
 		
+		long lifespan = 4l * 7l * 24l * 60l * 60l * 1000l; 
 		// Set up a cache using a H2 database called 'cache'
-		CacheCoreEx cacheBackend = CacheCoreH2.create("cache", 15000000, true);
+		CacheCoreEx cacheBackend = CacheCoreH2.create(cacheDirName, lifespan, true);
 		CacheEx cacheFrontend = new CacheExImpl(cacheBackend);
 
 
-		/* Code for debugging - can be removed
-		//CacheCoreExBZip2 cc = (CacheCoreExBZip2)cacheBackend;
-		//((CacheCoreH2)cc.getDecoratee()).writeContents(System.out);
-		CacheEntry entry = cacheBackend.lookup("WebOfData", CannedQueryUtils.describe(Node.createURI("http://www.w3.org/2002/07/owl#Thing")).toString());
+		/* Code for debugging */
+		/*
+		CacheCoreExCompressor cc = (CacheCoreExCompressor)cacheBackend;
+		
+		CacheCoreH2 c = ((CacheCoreH2)cc.getDecoratee());
+		Iterator<CacheEntryH2> it = c.iterator();
+		while(it.hasNext()) {
+			CacheEntryH2 ce = (CacheEntryH2)it.next();
+			CacheEntry d = cc.wrap(ce);
+			
+			System.out.println(ce.getQueryHash());
+			System.out.println(ce.getQueryString());
+			InputStream in = d.getInputStreamProvider().open();
+			StreamUtils.copy(in, System.out);
+		}
+		
+		if(true) {
+			System.exit(0);
+		}
+		*/
+		
+		//System.out.println(StringUtils.md5Hash("http://aksw.org/ontology/WebOfData" + CannedQueryUtils.describe(Node.createURI("http://www.w3.org/2002/07/owl#Thing")).toString()));
+		
+		/*
+		CacheEntry entry = cacheBackend.lookup("http://aksw.org/ontology/WebOfData", CannedQueryUtils.describe(Node.createURI("http://www.w3.org/2002/07/owl#Thing")).toString());
 		if(entry != null) {
 			InputStream in = entry.getInputStreamProvider().open();
 			System.out.println("Content: " + StreamUtils.toString(in));
@@ -236,6 +496,7 @@ public class App2 {
 			entry.getInputStreamProvider().close();
 		}
 		*/
+		
 		
 		
 		List<QueryExecutionFactory<?>> factories = new ArrayList<QueryExecutionFactory<?>>();
@@ -261,7 +522,6 @@ public class App2 {
 						factory = new QueryExecutionFactoryPaginated(factory, 10000);
 
 						// The pagination makes use of the cache
-						
 						factories.add(factory);
 					}
 				}
@@ -269,7 +529,7 @@ public class App2 {
 			reader.close();
 		}
 		
-		
+
 		// The fallback is to dereference data against the WoD itself
 		// FIXME Make user-agent configurable
 		Dereferencer dereferencer = DereferencerAny23.create("LATC QA tool <cstadler@informatik.uni-leipzig.de>");		
@@ -278,7 +538,8 @@ public class App2 {
 
 		factories.add(factory);
 		
-		
+		// FIXME Not sure if the DataAcquisitionTask should know about the direction
+		// As the dataProvider has an argument for this, maybe he should do the filtering
 		DataAcquisitionConfig config = new DataAcquisitionConfig(factories, direction);
 		
 		DataAcquisitionTaskFactory taskFactory = new DataAcquisitionTaskFactoryImpl(config);
@@ -286,8 +547,19 @@ public class App2 {
 		// Create a data fetcher to get data for the resources
 		DataProvider dataProvider = new WoDDataProvider2(taskFactory);		
 		
-		dataFetcher = new DataProviderSubtract(dataProvider, extraTriples.getModel());
+		dataFetcher = new DataProviderSubtract(dataProvider, sample);
 
+		/*
+		Set<Statement> stmts = dataFetcher.get(ResourceFactory.createResource("http://www.w3.org/2002/07/owl#Thing"), direction);
+		System.out.println("Fetched data:");
+		for(Statement stmt : stmts) {
+			System.out.println(stmt);
+		}
+		if(true) {
+			System.exit(0);
+		}*/
+
+		
 		// Create the metrics pipeline
 		metrics = new MetricsExecutor(dataFetcher, extraTriples);
 		metrics.addMetric(new Degree());

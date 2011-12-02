@@ -1,6 +1,6 @@
 <configuration>
 
-	<logger name="org.aksw.commons.sparql.api" level="ERROR" />
+	<logger name="org.aksw.commons.sparql.api" level="TRACE" />
 
   <appender name="CONSOLE"
     class="ch.qos.logback.core.ConsoleAppender">
@@ -13,7 +13,7 @@
       </pattern>
     </encoder>
   </appender>
-  <root level="INFO">
+  <root level="TRACE">
     <appender-ref ref="CONSOLE" />
   </root>
 </configuration>
