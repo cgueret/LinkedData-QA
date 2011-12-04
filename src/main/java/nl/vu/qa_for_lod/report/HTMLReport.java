@@ -13,15 +13,25 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.Map.Entry;
+
+import nl.vu.qa_for_lod.MetricsExecutor;
+import nl.vu.qa_for_lod.graph.DataProvider;
+import nl.vu.qa_for_lod.metrics.Distribution;
+import nl.vu.qa_for_lod.metrics.Distribution.DistributionAxis;
+import nl.vu.qa_for_lod.metrics.Metric;
+import nl.vu.qa_for_lod.metrics.MetricData;
+import nl.vu.qa_for_lod.metrics.MetricState;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.HashMultimap;
 import com.googlecode.charts4j.AxisLabels;
 import com.googlecode.charts4j.AxisLabelsFactory;
 import com.googlecode.charts4j.AxisStyle;
@@ -34,15 +44,10 @@ import com.googlecode.charts4j.Line;
 import com.googlecode.charts4j.LineChart;
 import com.googlecode.charts4j.Plots;
 import com.googlecode.charts4j.Shape;
+import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.Resource;
-
-import nl.vu.qa_for_lod.MetricsExecutor;
-import nl.vu.qa_for_lod.graph.DataProvider;
-import nl.vu.qa_for_lod.metrics.Distribution;
-import nl.vu.qa_for_lod.metrics.Metric;
-import nl.vu.qa_for_lod.metrics.MetricData;
-import nl.vu.qa_for_lod.metrics.MetricState;
-import nl.vu.qa_for_lod.metrics.Distribution.DistributionAxis;
+import com.hp.hpl.jena.rdf.model.Statement;
+import com.hp.hpl.jena.rdf.model.StmtIterator;
 
 /**
  * @author Christophe Guéret <christophe.gueret@gmail.com>
@@ -50,19 +55,23 @@ import nl.vu.qa_for_lod.metrics.Distribution.DistributionAxis;
  */
 public class HTMLReport {
 	static Logger logger = LoggerFactory.getLogger(HTMLReport.class);
-	private static final int HAF_SIZE = 5;
+	private static final int HAF_SIZE = 100;
 
+	
+	public static HTMLReport createReport(String datasetName, MetricsExecutor executor, DataProvider extraLinks) {
+		return createReport(datasetName, executor, extraLinks, new HashMap<String, Model>());
+	}	
 	/**
 	 * @param datasetName
 	 * @param executor
 	 * @param extraLinks
 	 * @return
 	 */
-	public static HTMLReport createReport(String datasetName, MetricsExecutor executor, DataProvider extraLinks) {
+	public static HTMLReport createReport(String datasetName, MetricsExecutor executor, DataProvider extraLinks, Map<String, Model> coloredModels) {
 		HTMLReport report = new HTMLReport(datasetName);
 		report.appendMetricStatuses(executor);
 		report.appendDistributions(executor);
-		report.appendHallOfFame(executor);
+		report.appendHallOfFame(executor, coloredModels);
 		report.close();
 		return report;
 	}
@@ -121,23 +130,74 @@ public class HTMLReport {
 	 * @param extraLinks
 	 * 
 	 */
-	private void appendHallOfFame(MetricsExecutor executor) {
+	private void appendHallOfFame(MetricsExecutor executor, Map<String, Model> coloredModels) {
+
+		// Invert the coloredModels map: Map resource to color
+		HashMultimap<Resource, String> resourceToColor = HashMultimap.create();
+		
+		for(Entry<String, Model> entry : coloredModels.entrySet()) {
+			String color = entry.getKey();
+			
+			StmtIterator it = entry.getValue().listStatements();
+			while(it.hasNext()) {
+				Statement stmt = it.next();
+				
+				resourceToColor.put(stmt.getSubject(), color);
+				resourceToColor.put(stmt.getPredicate(), color);
+				
+				if(stmt.getObject().isResource()) {
+					resourceToColor.put((Resource)stmt.getObject(), color);
+				}
+			}
+			
+			it.close();
+		}
+		
+		
+		// Count the number of slots (resources) for each metric
+		int maxSlotCount = 0;
+		Set<Metric> metrics = executor.getMetrics();
+		for (Metric metric : metrics) {
+			Map<Resource, Double> changedNodes = executor.getMetricData(metric).getNodeChanges();
+			
+			maxSlotCount = Math.max(maxSlotCount, changedNodes.size());
+		}
+		
+		
+		int slotCount = Math.min(HAF_SIZE, maxSlotCount);
+		
 		// Insert the HTML code
-		buffer.append("<h1>Outliers - top ").append(HAF_SIZE).append(" affected resources per metric</h1>");
+		buffer.append("<h1>Outliers - top ").append(slotCount).append(" out of max ").append(maxSlotCount).append(" affected resources per metric</h1>");
 		buffer.append("<table><tr>");
 		buffer.append("<th>Metric</th>");
-		for (int i=0; i < HAF_SIZE; i++)
+		for (int i=0; i < slotCount; i++)
 			buffer.append("<th>Resource (change)</th>");
 		buffer.append("</tr>");
-		for (Metric metric : executor.getMetrics()) {
+		for (Metric metric : metrics) {
 			buffer.append("<tr>");
 			buffer.append("<td>").append(metric.getName()).append("</td>");
 			Map<Resource, Double> changedNodes = executor.getMetricData(metric).getNodeChanges();
 			Set<Entry<Resource, Double>> entries = changedNodes.entrySet();
 			int count = 0;
-			for (Entry<Resource, Double> entry: entries) 
-				if (count++ < HAF_SIZE)
-					buffer.append("<td>").append(entry.getKey()).append(" (").append(entry.getValue()).append(")</td>");
+			for (Entry<Resource, Double> entry: entries) {
+				
+				Resource resource = entry.getKey();
+				Set<String> colors = resourceToColor.get(resource);
+				
+				String color = "";
+				if(!colors.isEmpty()) {
+					if(colors.size() > 1) {
+						logger.warn("Multiple colors for " + resource + ": " + colors + " - Picking first one.");
+					}
+					
+					color = " style='background-color:" +  colors.iterator().next() + ";'";
+				} 
+				
+				
+				if (count++ < slotCount) {
+					buffer.append("<td" + color + ">").append(entry.getKey()).append(" (").append(entry.getValue()).append(")</td>");
+				}
+			}
 			buffer.append("</tr>");
 		}
 		buffer.append("</table>");

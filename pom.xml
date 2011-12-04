@@ -147,7 +147,14 @@
 			<type>jar</type>
 			<scope>compile</scope>
 		</dependency>
-
+		<!-- Guava for SetMultimap -->
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>r09</version>
+			<type>jar</type>
+			<scope>compile</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpclient</artifactId>

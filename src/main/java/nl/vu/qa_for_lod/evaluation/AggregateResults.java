@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.aksw.commons.util.IniUtils;
+import org.aksw.commons.util.strings.StringUtils;
 import org.openjena.atlas.lib.MapUtils;
 
 enum Color {
@@ -25,10 +26,15 @@ class MetricReport
 	private String name;
 	private double change;
 	
-	public MetricReport(String name, double change)
+
+	//private boolean isGreen;
+	private Color color;
+	
+	public MetricReport(String name, double change, Color color)
 	{
 		this.name = name;
 		this.change = change;
+		this.color = color;
 	}
 
 	public String getName() {
@@ -40,7 +46,9 @@ class MetricReport
 	}
 	
 	public Color getColor() {
-		return change < 0.0 ? Color.GREEN : Color.RED;
+		//return change < 0.0 ? Color.GREEN : Color.RED;
+		//return isGreen ?
+		return color;
 	}
 
 	@Override
@@ -203,6 +211,8 @@ public class AggregateResults {
 		}
 		out.println("</tr>");
 		
+		
+		
 		for(Dataset dataset : result) {
 			
 			out.print("<tr><td>" + dataset.getName() + "</td>");
@@ -254,8 +264,17 @@ public class AggregateResults {
 		
 	
 			for(String metricName : metricNames) {
-				out.print("<td>" + posAggregation.get(metricName) + "/" + posAggregationTotal.get(metricName) + "</td>");
-				out.print("<td>" + negAggregation.get(metricName) + "/" + negAggregationTotal.get(metricName) + "</td>");
+				int posDenom = posAggregationTotal.get(metricName);
+				int negDenom = negAggregationTotal.get(metricName);
+				
+				Double posRatio = posDenom == 0 ? null : posAggregation.get(metricName) / (double)posDenom;
+				Double negRatio = negDenom == 0 ? null : negAggregation.get(metricName) / (double)negDenom;
+				
+				
+				
+				
+				out.print("<td style='background-color:" + ratioToColor(posRatio) + ";'>" + posAggregation.get(metricName) + "/" + posAggregationTotal.get(metricName) + "</td>");
+				out.print("<td style='background-color:" + ratioToColor(negRatio) + ";'>" + negAggregation.get(metricName) + "/" + negAggregationTotal.get(metricName) + "</td>");
 			}
 
 			out.println("</tr>");
@@ -270,6 +289,20 @@ public class AggregateResults {
 		
 		// Alternatively, we could want to see each metric individually
 		
+	}
+	
+	
+	public static String ratioToColor(Double ratio) {
+		
+		if(ratio == null) {
+			return "#dddddd";
+		} else if(ratio > 0.5) {
+			return "#aaffaa";
+			//double scale = Math.max(aratio * 
+			//return StringUtils.bytesToHexString(bytes)
+		} else {
+			return "#ffaaaa";
+		}
 	}
 	
 
@@ -325,9 +358,17 @@ public class AggregateResults {
 					String metricName = parts[0];
 					Double change = Double.parseDouble(parts[2]);
 					
-					MetricReport metricReport = new MetricReport(metricName, change);
+					String colorStr = parts[1].trim().toLowerCase();
+					Color color = null;
+					if(colorStr.equals("green")) {
+						color = Color.GREEN;
+					} else if(colorStr.equals("red")) {
+						color = Color.RED;
+					}
 					
-					System.out.println(dataset.getName() + "/" + type + "/" + i + ": " + metricName + ", " + change);
+					MetricReport metricReport = new MetricReport(metricName, change, color);
+					
+					System.out.println(dataset.getName() + "/" + type + "/" + i + ": " + metricName + ", " + change + ", " + color);
 					
 					datasetReport.add(metricReport);
 				}

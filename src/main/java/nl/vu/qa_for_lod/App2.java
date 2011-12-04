@@ -8,14 +8,18 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
+import java.util.Set;
 
 import nl.vu.qa_for_lod.graph.DataAcquisitionTaskFactory;
 import nl.vu.qa_for_lod.graph.DataProvider;
 import nl.vu.qa_for_lod.graph.Direction;
 import nl.vu.qa_for_lod.graph.EndPoint;
-import nl.vu.qa_for_lod.graph.impl.CannedQueryUtils;
 import nl.vu.qa_for_lod.graph.impl.DataAcquisitionConfig;
 import nl.vu.qa_for_lod.graph.impl.DataAcquisitionTaskFactoryImpl;
 import nl.vu.qa_for_lod.graph.impl.DataProviderMap;
@@ -45,7 +49,6 @@ import org.aksw.commons.sparql.api.dereference.Dereferencer;
 import org.aksw.commons.sparql.api.dereference.QueryExecutionFactoryDereference;
 import org.aksw.commons.sparql.api.http.QueryExecutionFactoryHttp;
 import org.aksw.commons.sparql.api.pagination.core.QueryExecutionFactoryPaginated;
-import org.aksw.commons.util.strings.StringUtils;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -58,17 +61,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.io.Files;
-import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.Statement;
+import com.hp.hpl.jena.rdf.model.StmtIterator;
 
 class SampleFile
 {
 	private File file;
 	private Integer sampleSize;
+	private String color;
 	
 	/**
 	 * 
@@ -76,9 +80,10 @@ class SampleFile
 	 * @param file
 	 * @param sampleSize null if not specified
 	 */
-	public SampleFile(File file, Integer sampleSize) {
+	public SampleFile(File file, Integer sampleSize, String color) {
 		this.file = file;
 		this.sampleSize = sampleSize;
+		this.color = color;
 	}
 
 	public File getFile() {
@@ -89,6 +94,10 @@ class SampleFile
 		return sampleSize;
 	}
 
+	public String getColor() {
+		return color;
+	}
+	
 	@Override
 	public String toString() {
 		return "SampleFile [file=" + file + ", sampleSize=" + sampleSize + "]";
@@ -152,7 +161,8 @@ public class App2 {
 	 * if interpreting the key as a file points to an existing file, sampleSize is treated as
 	 * not specified, and the value of that pair is skipped.
 	 *  
-	 * 
+	 * color? size? file
+	 * #ff0000 150 myfile.nt
 	 * 
 	 * @param args
 	 * @return
@@ -163,49 +173,52 @@ public class App2 {
 		List<SampleFile> result = new ArrayList<SampleFile>();
 		
 		int i = 0;
+		String defaultColor = null;
 		while(i < values.length) {
-			String key = values[i++];
+			String key = values[i];
 
-			File file = new File(key);
-			if(file.exists()) {
+			String color = defaultColor;
+			// Check if the key is color (starts with #)
+			if(key.startsWith("#")) {
+				color = key;
 				
-				result.add(new SampleFile(file, null));
-				
-				continue;
+				if(i++ > values.length) {
+					throw new RuntimeException("Missing argument");
+				}
+				key = values[i];
 			}
 			
-			Integer sampleSize;
+			// Check if the key is size
+			Integer sampleSize = null;
 			try {
 				sampleSize = Integer.parseInt(key);
+				if(i++ > values.length) {
+					throw new RuntimeException("Missing argument");
+				}
+				key = values[i];
+				
 			} catch (Exception e) {
-				throw new RuntimeException("Failed to parse sample size value '" + key + "'", e);
-			}
-			
-			if(sampleSize < 0) {
-				sampleSize = null;
-			}
-			
-			if(i >= values.length) {
-				throw new RuntimeException("File name expected");
-			}
-			
-			String value = values[i++];
-			file = new File(value);
-			if(!file.exists()) {
-				throw new FileNotFoundException(value);
+				
 			}
 
-			result.add(new SampleFile(file, sampleSize));
+			File file = new File(key);
+			if(!file.exists()) {
+				throw new FileNotFoundException(key);
+			}
+
+			result.add(new SampleFile(file, sampleSize, color));
+			++i;
 		}
 
 		return result;
 	}
 
-	public static Model prepareSample(List<SampleFile> sampleFiles, Random random)
+	/*
+	public static Map<String, Model>  prepareSample(List<SampleFile> sampleFiles, Random random)
 			throws Exception
 	{
 		return prepareSample(sampleFiles, ModelFactory.createDefaultModel(), random);
-	}
+	}*/
 
 	public static <T> void retainRandomSample(List<T> inout, int sampleSize, Random random)
     {
@@ -214,14 +227,32 @@ public class App2 {
         inout.subList(Math.min(sampleSize, inout.size()), inout.size()).clear();
     }
 
-	public static Model prepareSample(List<SampleFile> sampleFiles, Model result, Random random)
+	public static Map<String, Model> prepareSample(List<SampleFile> sampleFiles, Model result, Integer max, Random random)
 			throws Exception
 	{
+		Map<String, Model> coloredModels = new HashMap<String, Model>();
 
+		
 		for(SampleFile sampleFile : sampleFiles) {
 			Model tmp = ModelUtils.read(sampleFile.getFile());
+
+			Model coloredModel = null;
+			if(sampleFile.getColor() != null) {
+				coloredModel = coloredModels.get(sampleFile.getColor());
+				if(coloredModel == null) {
+					coloredModel = ModelFactory.createDefaultModel();
+					coloredModels.put(sampleFile.getColor(), coloredModel);
+				}
+			}
+
 			if(sampleFile.getSampleSize() == null) {
+				
 				result.add(tmp);
+				
+				if(coloredModel != null) {
+					coloredModel.add(tmp);
+				}
+				
 				logger.info("Loaded " + sampleFile.getFile().getAbsolutePath() + " for " + tmp.size() + " triples"); 
 			}
 			else {
@@ -230,11 +261,37 @@ public class App2 {
 
 				logger.info("Sampled " + sampleFile.getFile().getAbsolutePath() + " for " + sample.size() + " triples"); 
 				result.add(sample);
+				
+				if(coloredModel != null) {
+					coloredModel.add(sample);
+				}
 			}
 		}
 		
+		
+		if(max != null) {
+			List<Statement> stmts = result.listStatements().toList();
+			retainRandomSample(stmts, max, random);
+			
+			// Overwrite our previous result
+			//result = ModelFactory.createDefaultModel();
+			result.removeAll();
+			result.add(stmts);
+			
+			// Remove unnecessary statements from colored models
+			for(Entry<String, Model> entry : coloredModels.entrySet()) {
+				StmtIterator it = entry.getValue().listStatements();
+				
+				while(it.hasNext()) {
+					if(!result.contains(it.next())) {
+						it.remove();
+					}
+				}
+				it.close();
+			}
+		}
 	
-		return result;
+		return coloredModels;
 	}
 	
 	
@@ -273,20 +330,22 @@ public class App2 {
 		Option resourcesFileOption = OptionBuilder.withArgName("resources.txt").hasArg()
 				.withDescription("use the given file for the resources").create("resources");
 		options.addOption(resourcesFileOption);
-		Option endpointsFileOption = OptionBuilder.withArgName("endpoints.txt").hasArg()
+		Option endpointsFileOption = OptionBuilder.withArgName("endpoints.txt").hasArgs()
 				.withDescription("use the given file for the end points").create("endpoints");
 		options.addOption(endpointsFileOption);
 		
-		/* Use '-triples 120 myfile.nt' instead
+
+		// Maximum can be used to trim a sample created from multiple -triples arguments
 		Option maximumTriplesOption = OptionBuilder.withArgName("number").hasArg()
 				.withDescription("maximum amount of triples to consider (0 for unlimited)").create("max");
 		options.addOption(maximumTriplesOption);
-		*/
+
 		
 		options.addOption("h", false, "print help message");
 		options.addOption("nogui", false, "disable the progress bar");
 		options.addOption("onlyout", false, "force to use only outgoing triples");
 
+		options.addOption("permissive", false, "ignore unreachable endpoints");
 		
 		// Parse the command line
 		CommandLineParser parser = new PosixParser();
@@ -346,13 +405,22 @@ public class App2 {
 		}
 
 		// Get resources file name
-		String endpointsFileName = cmd.getOptionValue("endpoints");
-		File endpointsFile = (endpointsFileName == null ? null : new File(endpointsFileName));
-		if (endpointsFileName != null && !endpointsFile.exists()) {
-			System.err.println("Invalid endpoints file");
-			printHelpAndExit(-1);
+		String[] endpointsFileNames = cmd.getOptionValues("endpoints");
+		List<File> endpointsFiles = new ArrayList<File>();
+		
+		if(endpointsFileNames != null) {
+			for(String fileName : endpointsFileNames) {
+				File file = new File(fileName);
+				if(!file.exists()) {
+					System.err.println("Invalid endpoints file: " + file.getAbsolutePath());
+					printHelpAndExit(-1);					
+				}
+		
+				endpointsFiles.add(file);
+			}
 		}
-
+		
+		
 		// Setup the output directory
 		String outDirName = cmd.getOptionValue("out");
 		if (outDirName == null || outDirName.trim().isEmpty()) {
@@ -363,9 +431,28 @@ public class App2 {
 		if (!outputDirectory.exists()) {
 			outputDirectory.mkdirs();
 		}
+		
+		
+
+		// Maximum amount of triples
+		Integer max = null;
+		if (cmd.hasOption("max")) {
+			try {
+				max = Integer.parseInt(cmd.getOptionValue("max"));
+			} catch (Exception e) {
+				System.err.println("Invalid maximum amount of triples");
+				printHelpAndExit(-1);
+			}
+		}
+		
 
 		// Prepare the sample
-		Model sample = prepareSample(sampleFiles, random);
+		Model sample = ModelFactory.createDefaultModel();
+		Map<String, Model> coloredModels = prepareSample(sampleFiles, sample, max, random);
+		
+		
+			
+		logger.info("Total sample size: " + sample.size() + " triples remaining");
 		
 		// For the record: Write the sample into the output dir
 		File sampleFile = new File(outDirName + "/sample.nt");
@@ -383,6 +470,9 @@ public class App2 {
 
 			//throw new RuntimeException(sampleFile.getAbsolutePath() + " exists. ");
 		}
+		
+		
+		boolean permissive = cmd.hasOption("permissive");
 		
 		FileOutputStream fos = new FileOutputStream(sampleFile);
 		
@@ -409,17 +499,6 @@ public class App2 {
 		
 		String cacheDirName = "cache";
 		
-		/*
-		// Maximum amount of triples
-		int max = 150;
-		if (cmd.hasOption("max")) {
-			try {
-				max = Integer.parseInt(cmd.getOptionValue("max"));
-			} catch (Exception e) {
-				System.err.println("Invalid maximum amount of triples");
-				printHelpAndExit(-1);
-			}
-		}*/
 		//direction = Direction.IN; 
 		logger.info("DIRECTION: " + direction);
 		
@@ -429,8 +508,8 @@ public class App2 {
 		
 		try {
 			// Create, init and run
-			App2 app = new App2(sample, resourcesFile, endpointsFile, cacheDirName, direction);
-			app.process(outputDirectory, withGUI, direction);
+			App2 app = new App2(sample, resourcesFile, endpointsFiles, cacheDirName, direction, permissive);
+			app.process(outputDirectory, withGUI, direction, coloredModels);
 			app.close();
 		} finally {
 			if(server != null) {
@@ -451,7 +530,7 @@ public class App2 {
 	 * @param max
 	 * @throws Exception
 	 */
-	public App2(Model sample, File resourcesFile, File endpointsFile, String cacheDirName, Direction direction) throws Exception {
+	public App2(Model sample, File resourcesFile, List<File> endpointsFiles, String cacheDirName, Direction direction, boolean permissive) throws Exception {
 
 		extraTriples = DataProviderUtils.create(sample);
 
@@ -503,13 +582,23 @@ public class App2 {
 		
 		
 		// Add the end points if they are provided
-		if (endpointsFile != null) {
+		//if (endpointsFile != null) {
+		for(File endpointsFile : endpointsFiles) {
 			BufferedReader reader = new BufferedReader(new FileReader(endpointsFile));
+			
+			Set<EndPoint> seenEndpoints = new HashSet<EndPoint>(); 
+			
 			for (String line = reader.readLine(); line != null; line = reader.readLine()) {
 				if (!line.startsWith("#")) {
 					String[] parts = line.split(" ");
 					if (parts.length > 0) {
 						EndPoint endPoint = new EndPoint(parts[0], (parts.length > 1 ? parts[1] : null));
+						
+						if(seenEndpoints.contains(endPoint)) {
+							logger.info("Skipping because already configued: " + endPoint);
+							continue;
+						}
+						seenEndpoints.add(endPoint);
 						
 						logger.info("Configuring Endpoint " + endPoint);
 						
@@ -517,12 +606,21 @@ public class App2 {
 								? Collections.<String>emptySet()
 								: Collections.singleton(endPoint.getGraph());
 
-						QueryExecutionFactory<?> factory = new QueryExecutionFactoryHttp(endPoint.getURI(), defaultGraphs);
-						factory = new QueryExecutionFactoryCacheEx(factory, cacheFrontend);
-						factory = new QueryExecutionFactoryPaginated(factory, 10000);
+						try {
+							QueryExecutionFactory<?> factory = new QueryExecutionFactoryHttp(endPoint.getURI(), defaultGraphs);
+							factory = new QueryExecutionFactoryCacheEx(factory, cacheFrontend);
+							factory = new QueryExecutionFactoryPaginated(factory, 10000);
 
-						// The pagination makes use of the cache
-						factories.add(factory);
+							// The pagination makes use of the cache
+							factories.add(factory);
+						} catch(Exception e) {
+							if(permissive) {
+								logger.warn("Skipping endpoint: " + endPoint, e);
+							} else {
+								throw e;
+							}							
+						}
+						
 					}
 				}
 			}
@@ -597,15 +695,15 @@ public class App2 {
 	 * @param direction
 	 * @throws Exception
 	 */
-	private void process(File outputDirectory, boolean withGUI, Direction direction) throws Exception {
+	private void process(File outputDirectory, boolean withGUI, Direction direction, Map<String, Model> coloredModels) throws Exception {
 		
 		
 		// Run all the metrics
 		metrics.processQueue(withGUI, direction);
 		
 		// Generate the analysis report
-		logger.info("Save execution report in " + outputDirectory + "/report.html");
-		HTMLReport report = HTMLReport.createReport("dataset", metrics, extraTriples);
+		logger.info("Save execution report in " + outputDirectory.getAbsolutePath() + "/report.html");
+		HTMLReport report = HTMLReport.createReport("dataset", metrics, extraTriples, coloredModels);
 		report.writeTo(outputDirectory + "/report.html");
 
 		// Save the distributions

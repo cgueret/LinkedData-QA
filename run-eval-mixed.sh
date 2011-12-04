@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Perform a multi-run evaluation on a specific directory.
+# Perform a multi-run evaluation by samplingg accross ALL positive or negative, respectively repos
 
 source config
 
-maxRunCount=3
+maxRunCount=10
 
 #outBase="reports/sampled/onlyout"
 #$inBase="data-latc"
@@ -17,7 +17,8 @@ maxRunCount=3
 #        continue
 #    fi
 
-n=150
+max=150
+n=50
 
 type="$1"
 
@@ -26,16 +27,31 @@ if [ -z "$type" ]; then
 	exit
 fi
 
-for dir in `find "$posNegRepo" -maxdepth 1 -mindepth 1 -type d`; do
+args=""
+endpoints=""
+
+for dir in `find "$mixedRepo" -maxdepth 1 -mindepth 1 -type d`; do
+
+	candidateFile="$dir/$type.nt"
+	if [ -f $candidateFile ]; then
+		export args="$args $n $candidateFile"
+
+		endpointsFile="$dir/endpoints.txt"
+
+		export endpoints="$endpoints $endpointsFile"
+	fi
+
+done
+
+#echo "$args"
+#exit 0
 
     for (( i=1; i<=$maxRunCount; ++i )); do
 
-	file="$dir/$type.nt"
-	endpointsFile="$dir/endpoints.txt"
-	outDir="$dir/$type/$i"
+	outDir="$mixedRepo/$type/$i"
 
 
-	cmd="java -Xmx4096M -server -d64 -jar target/qa_for_lod-0.0.1-SNAPSHOT-jar-with-dependencies.jar -onlyout -nogui -triples $n $file -out $outDir -endpoints $endpointsFile -seed $i"
+	cmd="java -Xmx4096M -server -d64 -jar target/qa_for_lod-0.0.1-SNAPSHOT-jar-with-dependencies.jar -onlyout -nogui -triples $args -out $outDir -endpoints $endpoints -seed $i -permissive"
 
        echo "$cmd"
        echo ""

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Perform a multi-run evaluation on a specific directory.
+# Mix the positive and negative links in order to determine whether the negative ones become the outliers
 
 source config
 
@@ -17,25 +17,20 @@ maxRunCount=3
 #        continue
 #    fi
 
-n=150
+nPos=140
+nNeg=10
 
-type="$1"
-
-if [ -z "$type" ]; then
-	echo "Please specify positive or negative"
-	exit
-fi
-
-for dir in `find "$posNegRepo" -maxdepth 1 -mindepth 1 -type d`; do
+for dir in `find "$rankingRepo" -maxdepth 1 -mindepth 1 -type d`; do
 
     for (( i=1; i<=$maxRunCount; ++i )); do
 
-	file="$dir/$type.nt"
+	posFile="$dir/positive.nt"
+	negFile="$dir/negative.nt"
 	endpointsFile="$dir/endpoints.txt"
-	outDir="$dir/$type/$i"
+	outDir="$dir/ranking/$i"
 
 
-	cmd="java -Xmx4096M -server -d64 -jar target/qa_for_lod-0.0.1-SNAPSHOT-jar-with-dependencies.jar -onlyout -nogui -triples $n $file -out $outDir -endpoints $endpointsFile -seed $i"
+	cmd="java -Xmx4096M -server -d64 -jar target/qa_for_lod-0.0.1-SNAPSHOT-jar-with-dependencies.jar -onlyout -nogui -triples $nPos $posFile #ffaaaa $nNeg $negFile -out $outDir -endpoints $endpointsFile -seed $i"
 
        echo "$cmd"
        echo ""
