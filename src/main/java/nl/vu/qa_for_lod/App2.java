@@ -583,16 +583,16 @@ public class App2 {
 		
 		// Add the end points if they are provided
 		//if (endpointsFile != null) {
+		Set<EndPoint> seenEndpoints = new HashSet<EndPoint>(); 
+
 		for(File endpointsFile : endpointsFiles) {
 			BufferedReader reader = new BufferedReader(new FileReader(endpointsFile));
-			
-			Set<EndPoint> seenEndpoints = new HashSet<EndPoint>(); 
-			
+						
 			for (String line = reader.readLine(); line != null; line = reader.readLine()) {
 				if (!line.startsWith("#")) {
 					String[] parts = line.split(" ");
 					if (parts.length > 0) {
-						EndPoint endPoint = new EndPoint(parts[0], (parts.length > 1 ? parts[1] : null));
+						EndPoint endPoint = new EndPoint(parts[0].trim(), (parts.length > 1 ? parts[1].trim() : null));
 						
 						if(seenEndpoints.contains(endPoint)) {
 							logger.info("Skipping because already configued: " + endPoint);
