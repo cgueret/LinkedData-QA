@@ -51,7 +51,7 @@ done
 	outDir="$mixedRepo/$type/$i"
 
 
-	cmd="java -Xmx4096M -server -d64 -jar target/qa_for_lod-0.0.1-SNAPSHOT-jar-with-dependencies.jar -onlyout -nogui -triples $args -out $outDir -endpoints $endpoints -seed $i -permissive"
+	cmd="java -Xmx4096M -server -d64 -jar target/qa_for_lod-0.0.1-SNAPSHOT-jar-with-dependencies.jar -onlyout -nogui -triples $args -out $outDir -endpoints $endpoints -seed $i -permissive -max $max"
 
        echo "$cmd"
        echo ""
