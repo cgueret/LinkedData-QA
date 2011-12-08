@@ -4,7 +4,7 @@
 
 source config
 
-maxRunCount=10
+maxRunCount=50
 
 #outBase="reports/sampled/onlyout"
 #$inBase="data-latc"
@@ -17,7 +17,7 @@ maxRunCount=10
 #        continue
 #    fi
 
-max=150
+max=300
 n=50
 
 type="$1"
@@ -26,6 +26,8 @@ if [ -z "$type" ]; then
 	echo "Please specify positive or negative"
 	exit
 fi
+
+baseSeed=$2
 
 args=""
 endpoints=""
@@ -46,26 +48,25 @@ done
 #echo "$args"
 #exit 0
 
-    for (( i=1; i<=$maxRunCount; ++i )); do
+for (( i=1; i<=$maxRunCount; ++i )); do
 
 	outDir="$mixedRepo/$type/$i"
 
+	seed=$(($baseSeed + $i))
+	cmd="java -Xmx4096M -server -d64 -jar target/qa_for_lod-0.0.1-SNAPSHOT-jar-with-dependencies.jar -onlyout -nogui -triples $args -out $outDir -endpoints $endpoints -seed $seed -permissive -max $max"
 
-	cmd="java -Xmx4096M -server -d64 -jar target/qa_for_lod-0.0.1-SNAPSHOT-jar-with-dependencies.jar -onlyout -nogui -triples $args -out $outDir -endpoints $endpoints -seed $i -permissive -max $max"
+	echo "$cmd"
+	echo ""
 
-       echo "$cmd"
-       echo ""
-
-       echo ""
-       echo "Processing:"
-       echo "---------------------------------------------"
+	echo ""
+	echo "Processing:"
+	echo "---------------------------------------------"
 	echo "Type            : $type"
 	echo "Source Directory: $dir"
 	echo "Output Directory: $outDir"
 	echo "Seed            : $i"
 	echo "Endpoint        : $endpointsFile"
 	$cmd
-    done
 done
 
 
